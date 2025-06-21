@@ -3,6 +3,63 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.3.23](https://github.com/cube-js/cube/compare/v1.3.22...v1.3.23) (2025-06-19)
+
+### Bug Fixes
+
+- **api-gateway:** Fix request validation (offset & limit must be numbers strictly) ([#9686](https://github.com/cube-js/cube/issues/9686)) ([b94470f](https://github.com/cube-js/cube/commit/b94470f07d2bd56f6396fe7fa269837c973af59d))
+- **backend-native:** Use the lowest granularity for data-transform td with granularity fallback ([#9640](https://github.com/cube-js/cube/issues/9640)) ([59210da](https://github.com/cube-js/cube/commit/59210da8c3edabaced373b83679bac17b0843ef4))
+- **cubesql:** Split meta on `CAST` over `__user` column ([#9690](https://github.com/cube-js/cube/issues/9690)) ([1685c1b](https://github.com/cube-js/cube/commit/1685c1b6dc6331855a9cd6e41ee4c7de8e185a8e))
+
+### Features
+
+- **server:** Add server config for headers and keep alive timeouts ([#9309](https://github.com/cube-js/cube/issues/9309)) ([8fd2c42](https://github.com/cube-js/cube/commit/8fd2c42c708c0be6863197849cfd3f10b7e51215))
+
+## [1.3.22](https://github.com/cube-js/cube/compare/v1.3.21...v1.3.22) (2025-06-18)
+
+### Bug Fixes
+
+- **client-core:** Fix for the issue with Generated SQL tab in playground ([#9675](https://github.com/cube-js/cube/issues/9675)) ([17570d4](https://github.com/cube-js/cube/commit/17570d42a70292a58baba963fd3f8106816a2824))
+- **cubejs-cli:** Fix validate command ([#9666](https://github.com/cube-js/cube/issues/9666)) ([b2bc99f](https://github.com/cube-js/cube/commit/b2bc99f3f29a8ba3ad1b07ded6379881668f596a))
+- **cubeorchestrator:** Fix serialization of link type format for dimension ([#9649](https://github.com/cube-js/cube/issues/9649)) ([267ce43](https://github.com/cube-js/cube/commit/267ce4374a549b970cef399743a0009f3deb4a35))
+- **questdb-driver:** Fix invalid QuestDB timestamp floor year unit ([#9678](https://github.com/cube-js/cube/issues/9678)) ([33012b1](https://github.com/cube-js/cube/commit/33012b1d20a54d63c24f20f7538d2bf504fd24ef))
+- **schema-compiler:** Case insensitive filter for ClickHouse ([#9373](https://github.com/cube-js/cube/issues/9373)) ([273d277](https://github.com/cube-js/cube/commit/273d277e1058feff36796c48cf0fb315a8211ced))
+- **schema-compiler:** Fix Access Policy inheritance ([#9648](https://github.com/cube-js/cube/issues/9648)) ([896af5e](https://github.com/cube-js/cube/commit/896af5eaeccec00c88463fa518e98bf374acdc9b))
+- **tesseract:** Fix rolling window external pre-aggregation ([#9625](https://github.com/cube-js/cube/issues/9625)) ([aae3b05](https://github.com/cube-js/cube/commit/aae3b05f49222009f57e407c52d7288bb33b9b8a))
+- **tesseract:** Fix rolling window with few time dimensions, filter_group in segments and member expressions ([#9673](https://github.com/cube-js/cube/issues/9673)) ([98d334b](https://github.com/cube-js/cube/commit/98d334bb8ee4debe49b428c92581f63596f3f56c))
+- **tesseract:** Fix typo in interval ([#9680](https://github.com/cube-js/cube/issues/9680)) ([9b75d99](https://github.com/cube-js/cube/commit/9b75d99a08abfd54a075e61a3040e14c034a5169))
+- **tesseract:** Handle JS exceptions in Rust with safe call ([#9677](https://github.com/cube-js/cube/issues/9677)) ([bb6d655](https://github.com/cube-js/cube/commit/bb6d6557b7c39267660dd3ae59ff341881c41a4b))
+
+### Features
+
+- **duckdb-driver:** Add support for using default credential provider chain for duckdb s3 access ([#9679](https://github.com/cube-js/cube/issues/9679)) ([89f54e9](https://github.com/cube-js/cube/commit/89f54e91af72e5d671268472d3ff04ebb841d1ed))
+- **prestodb-driver, trino-driver:** Support dbUseSelectTestConnection flag ([#9663](https://github.com/cube-js/cube/issues/9663)) ([97b6bb4](https://github.com/cube-js/cube/commit/97b6bb43b9f3dd7209a8aa164680be76dcfc9f45))
+- **schema-compiler:** Add support for time dimensions with granularities in multi-stage measures add_group_by ([#9657](https://github.com/cube-js/cube/issues/9657)) ([6700b43](https://github.com/cube-js/cube/commit/6700b432cc22d71b4b8ef650e835ba0cb33cf91c))
+
+## [1.3.21](https://github.com/cube-js/cube/compare/v1.3.20...v1.3.21) (2025-06-10)
+
+### Bug Fixes
+
+- **client-vue3:** Prevent heuristic call when initial query is empty in computed property validateQuery ([#9656](https://github.com/cube-js/cube/issues/9656)) ([622b266](https://github.com/cube-js/cube/commit/622b26601e6bde3f15fb1cfc5ff53daff5cb6ed9))
+- Report more accurate time to APM on heavy used deployments ([#9667](https://github.com/cube-js/cube/issues/9667)) ([a900c78](https://github.com/cube-js/cube/commit/a900c787d3724ebdd241cb0e4f4562e37f81ce14))
+- **schema-compiler:** Fix pre-aggregation for time dimension matching ([#9669](https://github.com/cube-js/cube/issues/9669)) ([0914e1e](https://github.com/cube-js/cube/commit/0914e1ed89b7d1cf8f3bf8dc19858aeaf4b779a7))
+
+## [1.3.20](https://github.com/cube-js/cube/compare/v1.3.19...v1.3.20) (2025-06-06)
+
+### Bug Fixes
+
+- **cubesql:** Fix Tableau relative dates ([#9641](https://github.com/cube-js/cube/issues/9641)) ([18ec4fc](https://github.com/cube-js/cube/commit/18ec4fc4fcd9ea94799241dc3f8ce9c7ac531b4a))
+- **cubestore:** Delete old metastore snapshots in batches, after updating metastore-current ([#9647](https://github.com/cube-js/cube/issues/9647)) ([1104bde](https://github.com/cube-js/cube/commit/1104bde3307b4e5fd941c731305d8faa67ac803f))
+- **schema-compiler:** Support for `export function xxx()` during transpilation ([#9645](https://github.com/cube-js/cube/issues/9645)) ([9bcb5a1](https://github.com/cube-js/cube/commit/9bcb5a16ae0c3f1b36d80ce4fcdfab20586b0b8a))
+- **tesseract:** Removed unnecessary pushdown of measure filters in multistage queries ([#9650](https://github.com/cube-js/cube/issues/9650)) ([265580f](https://github.com/cube-js/cube/commit/265580f59437ff762118e79e469e157da548d4aa))
+
+### Features
+
+- **cubesql:** Support `PERCENTILE_CONT` SQL push down ([#8697](https://github.com/cube-js/cube/issues/8697)) ([577a09f](https://github.com/cube-js/cube/commit/577a09f498085ca5a7950467e602dee54691e88e))
+- **databricks-jdbc-driver:** Support M2M OAuth Authentication ([#9651](https://github.com/cube-js/cube/issues/9651)) ([71c1022](https://github.com/cube-js/cube/commit/71c10226f7c797e8b63df248fc704f2a2f1b7452))
+- **prestodb-driver, trino-driver:** Support custom auth headers (JWT) ([#9660](https://github.com/cube-js/cube/issues/9660)) ([3219695](https://github.com/cube-js/cube/commit/32196950d2c54ce482f686ae61c978a0c375e2f8))
+- **trino-driver:** Add special testConnection for Trino ([#9634](https://github.com/cube-js/cube/issues/9634)) ([ae10a76](https://github.com/cube-js/cube/commit/ae10a767636322a7fcff21ca6b648b4a0374aad2))
+
 ## [1.3.19](https://github.com/cube-js/cube/compare/v1.3.18...v1.3.19) (2025-06-02)
 
 ### Bug Fixes
