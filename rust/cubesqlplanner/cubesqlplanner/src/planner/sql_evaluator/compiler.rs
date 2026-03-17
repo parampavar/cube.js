@@ -23,6 +23,7 @@ pub struct Compiler {
     base_tools: Rc<dyn BaseTools>,
     security_context: Rc<dyn SecurityContext>,
     timezone: Tz,
+    member_to_alias: Option<HashMap<String, String>>,
     members: HashMap<SymbolPath, Rc<MemberSymbol>>,
     cube_names: HashMap<Vec<String>, Rc<CubeNameSymbol>>,
     cube_tables: HashMap<Vec<String>, Rc<CubeTableSymbol>>,
@@ -34,12 +35,14 @@ impl Compiler {
         base_tools: Rc<dyn BaseTools>,
         security_context: Rc<dyn SecurityContext>,
         timezone: Tz,
+        member_to_alias: Option<HashMap<String, String>>,
     ) -> Self {
         Self {
             cube_evaluator,
             security_context,
             base_tools,
             timezone,
+            member_to_alias,
             members: HashMap::new(),
             cube_names: HashMap::new(),
             cube_tables: HashMap::new(),
@@ -127,10 +130,11 @@ impl Compiler {
             return Ok(exists.clone());
         }
         let full_name = path.full_name().clone();
-        let definition = self.cube_evaluator.segment_by_path(full_name)?;
+        let definition = self.cube_evaluator.segment_by_path(full_name.clone())?;
         let sql_call = self.compile_sql_call(path.cube_name(), definition.sql()?)?;
-        let alias =
-            PlanSqlTemplates::member_alias_name(path.cube_name(), path.symbol_name(), &None);
+        let alias = self.alias_for_member(&full_name).unwrap_or_else(|| {
+            PlanSqlTemplates::member_alias_name(path.cube_name(), path.symbol_name(), &None)
+        });
         let cube_symbol = self.add_cube_table_evaluator(path.cube_name().clone(), vec![])?;
         let symbol = MemberExpressionSymbol::try_new(
             cube_symbol,
@@ -189,6 +193,12 @@ impl Compiler {
 
     pub fn timezone(&self) -> Tz {
         self.timezone.clone()
+    }
+
+    pub fn alias_for_member(&self, full_name: &str) -> Option<String> {
+        self.member_to_alias
+            .as_ref()
+            .and_then(|m| m.get(full_name).cloned())
     }
 
     pub fn compile_sql_call(
