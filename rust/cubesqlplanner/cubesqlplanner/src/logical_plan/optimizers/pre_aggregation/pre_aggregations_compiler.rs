@@ -8,10 +8,10 @@ use crate::logical_plan::PreAggregationJoinItem;
 use crate::logical_plan::PreAggregationTable;
 use crate::logical_plan::PreAggregationUnion;
 use crate::planner::join_hints::JoinHints;
+use crate::planner::multi_fact_join_groups::{MeasuresJoinHints, MultiFactJoinGroups};
 use crate::planner::planners::JoinPlanner;
 use crate::planner::planners::ResolvedJoinItem;
 use crate::planner::query_tools::QueryTools;
-use crate::planner::sql_evaluator::collectors::collect_cube_names_from_symbols;
 use crate::planner::sql_evaluator::MemberSymbol;
 use crate::planner::sql_evaluator::TimeDimensionSymbol;
 use crate::planner::GranularityHelper;
@@ -180,6 +180,14 @@ impl PreAggregationsCompiler {
             .static_data()
             .allow_non_strict_date_range_match
             .unwrap_or(false);
+
+        let measures_join_hints = MeasuresJoinHints::builder(&JoinHints::new())
+            .add_dimensions(&dimensions)
+            .add_dimensions(&time_dimensions)
+            .build(&measures)?;
+        let multi_fact_join_groups =
+            MultiFactJoinGroups::try_new(self.query_tools.clone(), measures_join_hints)?;
+
         let rollups = if let Some(refs) = description.rollup_references()? {
             let r = self
                 .query_tools
@@ -191,7 +199,17 @@ impl PreAggregationsCompiler {
         };
 
         let source = if static_data.pre_aggregation_type == "rollupJoin" {
-            PreAggregationSource::Join(self.build_join_source(&measures, &dimensions, &rollups)?)
+            let all_dimensions = dimensions
+                .iter()
+                .cloned()
+                .chain(time_dimensions.iter().cloned())
+                .chain(segments.iter().cloned())
+                .collect_vec();
+            PreAggregationSource::Join(self.build_join_source(
+                &measures,
+                &all_dimensions,
+                &rollups,
+            )?)
         } else {
             let cube = self
                 .query_tools
@@ -221,6 +239,7 @@ impl PreAggregationsCompiler {
             time_dimensions,
             segments,
             allow_non_strict_date_range_match,
+            multi_fact_join_groups,
         });
         self.compiled_cache.insert(name.clone(), res.clone());
         Ok(res)
@@ -283,6 +302,7 @@ impl PreAggregationsCompiler {
             .allow_non_strict_date_range_match
             .unwrap_or(false);
         let granularity = pre_aggrs_for_lambda[0].granularity.clone();
+        let multi_fact_join_groups = pre_aggrs_for_lambda[0].multi_fact_join_groups.clone();
         let source = PreAggregationSource::Union(PreAggregationUnion { items: sources });
 
         let static_data = description.static_data();
@@ -297,6 +317,7 @@ impl PreAggregationsCompiler {
             time_dimensions,
             segments,
             allow_non_strict_date_range_match,
+            multi_fact_join_groups,
         });
         self.compiled_cache.insert(name.clone(), res.clone());
         Ok(res)
@@ -332,23 +353,30 @@ impl PreAggregationsCompiler {
         Ok(())
     }
 
+    fn join_hints_from_pre_aggregation(&self, symbols: &Vec<Rc<MemberSymbol>>) -> JoinHints {
+        let mut result = JoinHints::new();
+        for symbol in symbols {
+            let path = symbol.path();
+            if path.len() == 1 {
+                result.push(JoinHintItem::Single(path[0].clone()));
+            } else {
+                result.push(JoinHintItem::Vector(path.clone()));
+            }
+        }
+        result
+    }
     fn build_join_source(
         &mut self,
         measures: &Vec<Rc<MemberSymbol>>,
-        dimensions: &Vec<Rc<MemberSymbol>>,
+        all_dimensions: &Vec<Rc<MemberSymbol>>,
         rollups: &Vec<String>,
     ) -> Result<PreAggregationJoin, CubeError> {
         let all_symbols = measures
             .iter()
             .cloned()
-            .chain(dimensions.iter().cloned())
+            .chain(all_dimensions.iter().cloned())
             .collect_vec();
-        let pre_aggr_join_hints = JoinHints::from_items(
-            collect_cube_names_from_symbols(&all_symbols)?
-                .into_iter()
-                .map(|v| JoinHintItem::Single(v))
-                .collect_vec(),
-        );
+        let pre_aggr_join_hints = self.join_hints_from_pre_aggregation(&all_symbols);
 
         let join_planner = JoinPlanner::new(self.query_tools.clone());
         let pre_aggrs_for_join = rollups
@@ -366,16 +394,13 @@ impl PreAggregationsCompiler {
                 .iter()
                 .cloned()
                 .chain(join_pre_aggr.dimensions.iter().cloned())
+                .chain(join_pre_aggr.time_dimensions.iter().cloned())
+                .chain(join_pre_aggr.segments.iter().cloned())
                 .collect_vec();
-            let join_pre_aggr_join_hints = JoinHints::from_items(
-                collect_cube_names_from_symbols(&all_symbols)?
-                    .into_iter()
-                    .map(|v| JoinHintItem::Single(v))
-                    .collect_vec(),
-            );
-            existing_joins.append(
-                &mut join_planner.resolve_join_members_by_hints(&join_pre_aggr_join_hints)?,
-            );
+            let join_pre_aggr_join_hints = self.join_hints_from_pre_aggregation(&all_symbols);
+            let mut existing =
+                join_planner.resolve_join_members_by_hints(&join_pre_aggr_join_hints)?;
+            existing_joins.append(&mut existing);
         }
 
         let not_existing_joins = target_joins
@@ -395,6 +420,7 @@ impl PreAggregationsCompiler {
             .iter()
             .map(|item| self.make_pre_aggregation_join_item(&pre_aggrs_for_join, item))
             .collect::<Result<Vec<_>, _>>()?;
+
         let res = PreAggregationJoin {
             root: items[0].from.clone(),
             items,
@@ -820,5 +846,64 @@ mod tests {
         // Check dimensions
         assert_eq!(compiled.dimensions.len(), 1);
         assert_eq!(compiled.dimensions[0].full_name(), "orders.status");
+    }
+
+    #[test]
+    fn test_compile_rollup_join_calculated_measures() {
+        let schema = MockSchema::from_yaml_file("common/rollup_join_calculated_measures.yaml");
+        let test_context = TestContext::new(schema).unwrap();
+        let query_tools = test_context.query_tools().clone();
+
+        let cube_names = vec![
+            "line_items".to_string(),
+            "facts".to_string(),
+            "campaigns".to_string(),
+        ];
+        let mut compiler = PreAggregationsCompiler::try_new(query_tools, &cube_names).unwrap();
+
+        let pre_agg_name = PreAggregationFullName::new(
+            "line_items".to_string(),
+            "combined_rollup_join".to_string(),
+        );
+        let compiled = compiler.compile_pre_aggregation(&pre_agg_name).unwrap();
+
+        // Check source is Join with correct structure
+        match compiled.source.as_ref() {
+            PreAggregationSource::Join(join) => {
+                // Root should be li_rollup
+                match join.root.as_ref() {
+                    PreAggregationSource::Single(table) => {
+                        assert_eq!(table.name, "li_rollup", "Root should be li_rollup");
+                    }
+                    _ => panic!("Expected Single source for root"),
+                }
+                // Should have 2 join items (line_items→facts, line_items→campaigns)
+                assert_eq!(
+                    join.items.len(),
+                    2,
+                    "Should have 2 join items, got {}",
+                    join.items.len()
+                );
+                let to_names: Vec<String> = join
+                    .items
+                    .iter()
+                    .map(|item| match item.to.as_ref() {
+                        PreAggregationSource::Single(table) => table.name.clone(),
+                        _ => panic!("Expected Single source"),
+                    })
+                    .collect();
+                assert!(
+                    to_names.contains(&"facts_rollup".to_string()),
+                    "Should join to facts_rollup, got: {:?}",
+                    to_names
+                );
+                assert!(
+                    to_names.contains(&"campaigns_rollup".to_string()),
+                    "Should join to campaigns_rollup, got: {:?}",
+                    to_names
+                );
+            }
+            _ => panic!("Expected PreAggregationSource::Join"),
+        }
     }
 }

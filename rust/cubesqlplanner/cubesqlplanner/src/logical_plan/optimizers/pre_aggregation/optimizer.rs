@@ -3,6 +3,8 @@ use super::*;
 use crate::logical_plan::visitor::{LogicalPlanRewriter, NodeRewriteResult};
 use crate::logical_plan::*;
 use crate::plan::FilterItem;
+use crate::planner::join_hints::JoinHints;
+use crate::planner::multi_fact_join_groups::{MeasuresJoinHints, MultiFactJoinGroups};
 use crate::planner::query_tools::QueryTools;
 use crate::planner::sql_evaluator::MemberSymbol;
 use cubenativeutils::CubeError;
@@ -462,11 +464,58 @@ impl PreAggregationOptimizer {
         if match_state == MatchState::NotMatched {
             return Ok(None);
         }
-        self.try_match_measures(
+        let matched = self.try_match_measures(
             &all_measures,
             pre_aggregation,
             match_state == MatchState::Partial,
-        )
+        )?;
+        if matched.is_none() {
+            return Ok(None);
+        }
+
+        if !self.are_join_paths_matching(schema, &all_measures, pre_aggregation)? {
+            return Ok(None);
+        }
+
+        Ok(matched)
+    }
+
+    fn are_join_paths_matching(
+        &self,
+        schema: &Rc<LogicalSchema>,
+        measures: &[Rc<MemberSymbol>],
+        pre_aggregation: &CompiledPreAggregation,
+    ) -> Result<bool, CubeError> {
+        let query_hints = MeasuresJoinHints::builder(&JoinHints::new())
+            .add_dimensions(&schema.dimensions)
+            .add_dimensions(&schema.time_dimensions)
+            .build(measures)?;
+        let query_groups = MultiFactJoinGroups::try_new(self.query_tools.clone(), query_hints)?;
+        let pre_aggr_groups = &pre_aggregation.multi_fact_join_groups;
+
+        for dim in schema
+            .dimensions
+            .iter()
+            .chain(schema.time_dimensions.iter())
+        {
+            let query_path = query_groups.resolve_join_path_for_dimension(dim);
+            let pre_aggr_path = pre_aggr_groups.resolve_join_path_for_dimension(dim);
+            match (query_path, pre_aggr_path) {
+                (Some(qp), Some(pp)) if qp != pp => return Ok(false),
+                _ => {}
+            }
+        }
+
+        for measure in measures.iter() {
+            let query_path = query_groups.resolve_join_path_for_measure(measure);
+            let pre_aggr_path = pre_aggr_groups.resolve_join_path_for_measure(measure);
+            match (query_path, pre_aggr_path) {
+                (Some(qp), Some(pp)) if qp != pp => return Ok(false),
+                _ => {}
+            }
+        }
+
+        Ok(true)
     }
 
     fn try_match_measures(

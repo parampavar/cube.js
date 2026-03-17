@@ -651,3 +651,49 @@ fn test_segment_with_coarser_granularity() {
 
     insta::assert_snapshot!(sql);
 }
+
+// --- rollupJoin with calculated measures through view ---
+
+#[test]
+fn test_rollup_join_calculated_measures_through_view() {
+    let schema = MockSchema::from_yaml_file("common/rollup_join_calculated_measures.yaml");
+    let ctx = TestContext::new(schema).unwrap();
+
+    let (sql, pre_aggrs) = ctx
+        .build_sql_with_used_pre_aggregations(indoc! {"
+            measures:
+              - my_view.facts_avg_cost
+            time_dimensions:
+              - dimension: my_view.facts_day
+                granularity: day
+        "})
+        .unwrap();
+
+    let pre_agg_names: Vec<_> = pre_aggrs
+        .iter()
+        .map(|pa| format!("{}.{}", pa.cube_name(), pa.name()))
+        .collect();
+    assert!(
+        pre_agg_names
+            .iter()
+            .any(|n| n == "line_items.combined_rollup_join"),
+        "Should use combined_rollup_join, got: {:?}\nSQL:\n{}",
+        pre_agg_names,
+        sql
+    );
+    assert!(
+        sql.contains("campaigns_rollup"),
+        "SQL should reference campaigns_rollup, got:\n{}",
+        sql
+    );
+    assert!(
+        sql.contains("facts_rollup"),
+        "SQL should reference facts_rollup, got:\n{}",
+        sql
+    );
+    assert!(
+        sql.contains("li_rollup"),
+        "SQL should reference li_rollup, got:\n{}",
+        sql
+    );
+}

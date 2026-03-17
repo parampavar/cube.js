@@ -1,8 +1,9 @@
+use crate::planner::multi_fact_join_groups::MultiFactJoinGroups;
 use crate::planner::sql_evaluator::{MemberSymbol, SqlCall};
 use std::fmt::Debug;
 use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PreAggregationJoinItem {
     pub from: Rc<PreAggregationSource>,
     pub to: Rc<PreAggregationSource>,
@@ -11,18 +12,18 @@ pub struct PreAggregationJoinItem {
     pub on_sql: Rc<SqlCall>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PreAggregationJoin {
     pub root: Rc<PreAggregationSource>,
     pub items: Vec<PreAggregationJoinItem>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PreAggregationUnion {
     pub items: Vec<Rc<PreAggregationTable>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PreAggregationTable {
     pub cube_name: String,
     pub cube_alias: String,
@@ -30,7 +31,7 @@ pub struct PreAggregationTable {
     pub alias: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum PreAggregationSource {
     Single(PreAggregationTable),
     Join(PreAggregationJoin),
@@ -49,6 +50,7 @@ pub struct CompiledPreAggregation {
     pub time_dimensions: Vec<Rc<MemberSymbol>>,
     pub segments: Vec<Rc<MemberSymbol>>,
     pub allow_non_strict_date_range_match: bool,
+    pub multi_fact_join_groups: MultiFactJoinGroups,
 }
 
 impl Debug for CompiledPreAggregation {
