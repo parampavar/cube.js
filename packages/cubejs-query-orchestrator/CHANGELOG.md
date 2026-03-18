@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.24](https://github.com/cube-js/cube/compare/v1.6.23...v1.6.24) (2026-03-18)
+
+### Bug Fixes
+
+- **query-orchestrator:** Return cached result when refreshKey changes during must-revalidate ([#10489](https://github.com/cube-js/cube/issues/10489)) ([e00fe12](https://github.com/cube-js/cube/commit/e00fe125a546926e85b5c1c1be70a46fabcd53ff))
+
 ## [1.6.23](https://github.com/cube-js/cube/compare/v1.6.22...v1.6.23) (2026-03-13)
 
 **Note:** Version bump only for package @cubejs-backend/query-orchestrator
