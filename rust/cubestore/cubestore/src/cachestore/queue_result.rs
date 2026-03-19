@@ -16,6 +16,8 @@ pub struct QueueResult {
     pub(crate) deleted: bool,
     #[serde(with = "ts_seconds")]
     pub(crate) expire: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) external_id: Option<String>,
 }
 
 impl RocksEntity for QueueResult {
@@ -25,12 +27,13 @@ impl RocksEntity for QueueResult {
 }
 
 impl QueueResult {
-    pub fn new(path: String, value: String) -> Self {
+    pub fn new(path: String, value: String, external_id: Option<String>) -> Self {
         QueueResult {
             path,
             value,
             deleted: false,
             expire: Utc::now() + Duration::minutes(5),
+            external_id,
         }
     }
 
@@ -49,11 +52,16 @@ impl QueueResult {
     pub fn is_deleted(&self) -> bool {
         self.deleted
     }
+
+    pub fn get_external_id(&self) -> &Option<String> {
+        &self.external_id
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum QueueResultRocksIndex {
     ByPath = 1,
+    ByExternalId = 2,
 }
 pub struct QueueResultRocksTable<'a> {
     db: crate::metastore::DbTableRef<'a>,
@@ -72,6 +80,14 @@ impl<'a> QueueResultRocksTable<'a> {
             }
             QueueKey::ById(id) => self.get_row(id),
         }
+    }
+
+    pub fn get_row_by_external_id(
+        &self,
+        external_id: String,
+    ) -> Result<Option<IdRow<QueueResult>>, CubeError> {
+        let index_key = QueueResultIndexKey::ByExternalId(Some(external_id));
+        self.get_single_opt_row_by_index(&index_key, &QueueResultRocksIndex::ByExternalId)
     }
 }
 
@@ -94,12 +110,16 @@ impl<'a> BaseRocksTable for QueueResultRocksTable<'a> {
 }
 
 rocks_table_new!(QueueResult, QueueResultRocksTable, TableId::QueueResults, {
-    vec![Box::new(QueueResultRocksIndex::ByPath)]
+    vec![
+        Box::new(QueueResultRocksIndex::ByPath),
+        Box::new(QueueResultRocksIndex::ByExternalId),
+    ]
 });
 
 #[derive(Hash, Clone, Debug)]
 pub enum QueueResultIndexKey {
     ByPath(String),
+    ByExternalId(Option<String>),
 }
 
 base_rocks_secondary_index!(QueueResult, QueueResultRocksIndex);
@@ -108,24 +128,32 @@ impl RocksSecondaryIndex<QueueResult, QueueResultIndexKey> for QueueResultRocksI
     fn typed_key_by(&self, row: &QueueResult) -> QueueResultIndexKey {
         match self {
             QueueResultRocksIndex::ByPath => QueueResultIndexKey::ByPath(row.get_path().clone()),
+            QueueResultRocksIndex::ByExternalId => {
+                QueueResultIndexKey::ByExternalId(row.get_external_id().clone())
+            }
         }
     }
 
     fn key_to_bytes(&self, key: &QueueResultIndexKey) -> Vec<u8> {
         match key {
             QueueResultIndexKey::ByPath(s) => s.as_bytes().to_vec(),
+            QueueResultIndexKey::ByExternalId(s) => {
+                s.as_deref().unwrap_or("__null__").as_bytes().to_vec()
+            }
         }
     }
 
     fn is_unique(&self) -> bool {
         match self {
             QueueResultRocksIndex::ByPath => false,
+            QueueResultRocksIndex::ByExternalId => true,
         }
     }
 
     fn version(&self) -> u32 {
         match self {
             QueueResultRocksIndex::ByPath => 1,
+            QueueResultRocksIndex::ByExternalId => 1,
         }
     }
 
@@ -139,5 +167,12 @@ impl RocksSecondaryIndex<QueueResult, QueueResultIndexKey> for QueueResultRocksI
 
     fn get_id(&self) -> IndexId {
         *self as IndexId
+    }
+
+    fn should_index_row(&self, row: &QueueResult) -> bool {
+        match self {
+            Self::ByExternalId => row.external_id.is_some(),
+            _ => true,
+        }
     }
 }

@@ -117,6 +117,7 @@ pub enum QueueCommand {
         orphaned: Option<u32>,
         key: Ident,
         value: String,
+        external_id: Option<String>,
     },
     Get {
         key: QueueKey,
@@ -154,6 +155,9 @@ pub enum QueueCommand {
     Result {
         key: Ident,
     },
+    ResultByExternalId {
+        key: Ident,
+    },
     ResultBlocking {
         key: QueueKey,
         timeout: u64,
@@ -178,6 +182,7 @@ impl QueueCommand {
             QueueCommand::MergeExtra { .. } => "merge_extra",
             QueueCommand::Retrieve { .. } => "retrieve",
             QueueCommand::Result { .. } => "result",
+            QueueCommand::ResultByExternalId { .. } => "result_by_external_id",
             QueueCommand::ResultBlocking { .. } => "result_blocking",
             QueueCommand::Truncate { .. } => "truncate",
         }
@@ -509,11 +514,13 @@ impl<'a> CubeStoreParser<'a> {
                 let mut exclusive = false;
                 let mut priority = 0i64;
                 let mut orphaned: Option<u32> = None;
+                let mut external_id: Option<String> = None;
 
                 parse_sql_options!(self, {
                     "exclusive" => { exclusive = true },
                     "priority" => { priority = self.parse_integer("priority", true)? },
                     "orphaned" => { orphaned = Some(self.parse_integer("orphaned", false)?) },
+                    "external_id" => { external_id = Some(self.parser.parse_literal_string()?) },
                 });
 
                 QueueCommand::Add {
@@ -522,6 +529,7 @@ impl<'a> CubeStoreParser<'a> {
                     orphaned,
                     key: self.parser.parse_identifier()?,
                     value: self.parser.parse_literal_string()?,
+                    external_id,
                 }
             }
             "cancel" => QueueCommand::Cancel {
@@ -621,6 +629,9 @@ impl<'a> CubeStoreParser<'a> {
                 }
             }
             "result" => QueueCommand::Result {
+                key: self.parser.parse_identifier()?,
+            },
+            "result_by_external_id" => QueueCommand::ResultByExternalId {
                 key: self.parser.parse_identifier()?,
             },
             "result_blocking" => {

@@ -5,6 +5,7 @@ use crate::cachestore::cache_item::{
 use crate::cachestore::queue_item::{
     QueueItem, QueueItemIndexKey, QueueItemRocksIndex, QueueItemRocksTable, QueueItemStatus,
     QueueResultAckEvent, QueueResultAckEventResult, QueueRetrieveResponse,
+    QUEUE_ITEM_EXTERNAL_ID_MAX_LEN, QUEUE_ITEM_PROCESS_ID_MAX_LEN,
 };
 use crate::cachestore::queue_result::{QueueResultRocksIndex, QueueResultRocksTable};
 use crate::cachestore::{compaction, QueueItemPayload, QueueResult};
@@ -683,6 +684,7 @@ pub struct QueueAddPayload {
     pub orphaned: Option<u32>,
     pub process_id: Option<String>,
     pub exclusive: bool,
+    pub external_id: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Eq, PartialEq)]
@@ -840,6 +842,10 @@ pub trait CacheStore: DIService + Send + Sync {
     async fn queue_result_by_path(
         &self,
         path: String,
+    ) -> Result<Option<QueueResultResponse>, CubeError>;
+    async fn queue_result_by_external_id(
+        &self,
+        external_id: String,
     ) -> Result<Option<QueueResultResponse>, CubeError>;
     async fn queue_result_blocking(
         &self,
@@ -1084,6 +1090,23 @@ impl CacheStore for RocksCacheStore {
     }
 
     async fn queue_add(&self, payload: QueueAddPayload) -> Result<QueueAddResponse, CubeError> {
+        if let Some(ref id) = payload.process_id {
+            if id.len() > QUEUE_ITEM_PROCESS_ID_MAX_LEN {
+                return Err(CubeError::user(format!(
+                    "process_id exceeds maximum allowed length of {} characters",
+                    QUEUE_ITEM_PROCESS_ID_MAX_LEN
+                )));
+            }
+        }
+        if let Some(ref id) = payload.external_id {
+            if id.len() > QUEUE_ITEM_EXTERNAL_ID_MAX_LEN {
+                return Err(CubeError::user(format!(
+                    "external_id exceeds maximum allowed length of {} characters",
+                    QUEUE_ITEM_EXTERNAL_ID_MAX_LEN
+                )));
+            }
+        }
+
         self.write_operation_queue("queue_add", move |db_ref, batch_pipe| {
             let queue_schema = QueueItemRocksTable::new(db_ref.clone());
             let pending = queue_schema.count_rows_by_index(
@@ -1109,6 +1132,7 @@ impl CacheStore for RocksCacheStore {
                         payload.orphaned.clone(),
                         payload.process_id,
                         payload.exclusive,
+                        payload.external_id,
                     ),
                     batch_pipe,
                 )?;
@@ -1419,12 +1443,13 @@ impl CacheStore for RocksCacheStore {
             if let Some(item_row) = item_row {
                 let path = item_row.get_row().get_path();
                 let id = item_row.get_id();
+                let external_id = item_row.get_row().get_external_id().clone();
 
                 queue_item_tbl.delete_row(item_row, batch_pipe)?;
                 queue_item_payload_tbl.try_delete(id, batch_pipe)?;
 
                 if let Some(result) = result {
-                    let queue_result = QueueResult::new(path.clone(), result);
+                    let queue_result = QueueResult::new(path.clone(), result, external_id);
                     let result_schema = QueueResultRocksTable::new(db_ref.clone());
                     // QueueResult is a result of QueueItem, it's why we can use row_id of QueueItem
                     let result_row = result_schema.insert_with_pk(id, queue_result, batch_pipe)?;
@@ -1462,6 +1487,33 @@ impl CacheStore for RocksCacheStore {
             .await
     }
 
+    async fn queue_result_by_external_id(
+        &self,
+        external_id: String,
+    ) -> Result<Option<QueueResultResponse>, CubeError> {
+        self.write_operation_queue("queue_result_by_external_id", move |db_ref, batch_pipe| {
+            let result_schema = QueueResultRocksTable::new(db_ref.clone());
+            let queue_result = result_schema.get_row_by_external_id(external_id)?;
+
+            if let Some(queue_result) = queue_result {
+                if queue_result.get_row().is_deleted() {
+                    Ok(Some(QueueResultResponse::Success {
+                        value: Some(queue_result.into_row().value),
+                    }))
+                } else {
+                    Self::queue_result_ready_to_delete_impl(
+                        &result_schema,
+                        batch_pipe,
+                        queue_result,
+                    )
+                }
+            } else {
+                Ok(None)
+            }
+        })
+        .await
+    }
+
     async fn queue_result_blocking(
         &self,
         key: QueueKey,
@@ -1490,10 +1542,10 @@ impl CacheStore for RocksCacheStore {
                     }
                     QueueResultAckEventResult::WithResult { result } => {
                         if query_key_is_path {
-                            // Queue v1 behaviour
+                            // Queue v1 behavior
                             self.queue_result_delete_by_id(ack_event.id).await?;
                         } else {
-                            // Queue v2 behaviour
+                            // Queue v2 behavior
                             self.queue_result_ready_to_delete(ack_event.id).await?;
                         }
 
@@ -1704,6 +1756,15 @@ impl CacheStore for ClusterCacheStoreClient {
         _path: String,
     ) -> Result<Option<QueueResultResponse>, CubeError> {
         panic!("CacheStore cannot be used on the worker node! queue_result_by_path was used.")
+    }
+
+    async fn queue_result_by_external_id(
+        &self,
+        _external_id: String,
+    ) -> Result<Option<QueueResultResponse>, CubeError> {
+        panic!(
+            "CacheStore cannot be used on the worker node! queue_result_by_external_id was used."
+        )
     }
 
     async fn queue_result_blocking(
@@ -2120,6 +2181,7 @@ mod tests {
                 Some(10),
                 None,
                 false,
+                None,
             ),
         );
         let item_pending_custom_orphaned_expired = IdRow::new(
@@ -2131,6 +2193,7 @@ mod tests {
                 Some(1),
                 None,
                 false,
+                None,
             ),
         );
         let item_active_custom_orphaned = IdRow::new(
@@ -2142,6 +2205,7 @@ mod tests {
                 Some(10),
                 None,
                 false,
+                None,
             ),
         );
         let mut item_active_custom_orphaned_expired = IdRow::new(
@@ -2153,6 +2217,7 @@ mod tests {
                 Some(1),
                 None,
                 false,
+                None,
             ),
         );
 
@@ -2233,5 +2298,129 @@ mod tests {
             .collect::<Vec<u64>>(),
             vec![2, 3]
         );
+    }
+
+    #[tokio::test]
+    async fn test_queue_add_validations() -> Result<(), CubeError> {
+        let (_, cachestore) = RocksCacheStore::prepare_test_cachestore(
+            "test_queue_add_validations",
+            Config::test("test_queue_add_validations"),
+        );
+
+        let res = cachestore
+            .queue_add(QueueAddPayload {
+                path: "prefix:path1".to_string(),
+                value: "v1".to_string(),
+                priority: 0,
+                orphaned: None,
+                process_id: None,
+                exclusive: false,
+                external_id: Some("ext-dup".to_string()),
+            })
+            .await;
+        assert!(res.is_ok(), "First insert with external_id should succeed");
+        assert!(res.unwrap().added);
+
+        let res = cachestore
+            .queue_add(QueueAddPayload {
+                path: "prefix:path2".to_string(),
+                value: "v2".to_string(),
+                priority: 0,
+                orphaned: None,
+                process_id: None,
+                exclusive: false,
+                external_id: Some("ext-dup".to_string()),
+            })
+            .await;
+        assert!(res.is_err(), "Duplicate external_id should fail");
+        let err_msg = res.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("Unique constraint violation"),
+            "Expected unique constraint error, got: {}",
+            err_msg
+        );
+
+        // Multiple inserts with None external_id should all succeed
+        {
+            let res = cachestore
+                .queue_add(QueueAddPayload {
+                    path: "prefix:path3".to_string(),
+                    value: "v3".to_string(),
+                    priority: 0,
+                    orphaned: None,
+                    process_id: None,
+                    exclusive: false,
+                    external_id: None,
+                })
+                .await;
+            assert!(
+                res.is_ok(),
+                "First insert with None external_id should succeed"
+            );
+            assert!(res.unwrap().added);
+
+            let res = cachestore
+                .queue_add(QueueAddPayload {
+                    path: "prefix:path4".to_string(),
+                    value: "v4".to_string(),
+                    priority: 0,
+                    orphaned: None,
+                    process_id: None,
+                    exclusive: false,
+                    external_id: None,
+                })
+                .await;
+            assert!(
+                res.is_ok(),
+                "Second insert with None external_id should succeed"
+            );
+            assert!(res.unwrap().added);
+        }
+
+        // external_id exceeding max length should fail
+        {
+            let long_id = "x".repeat(QUEUE_ITEM_EXTERNAL_ID_MAX_LEN + 1);
+            let res = cachestore
+                .queue_add(QueueAddPayload {
+                    path: "prefix:path5".to_string(),
+                    value: "v5".to_string(),
+                    priority: 0,
+                    orphaned: None,
+                    process_id: None,
+                    exclusive: false,
+                    external_id: Some(long_id),
+                })
+                .await;
+            assert!(res.is_err(), "external_id exceeding max length should fail");
+            assert!(res
+                .unwrap_err()
+                .to_string()
+                .contains("external_id exceeds maximum allowed length"));
+        }
+
+        // process_id exceeding max length should fail
+        {
+            let long_id = "x".repeat(QUEUE_ITEM_PROCESS_ID_MAX_LEN + 1);
+            let res = cachestore
+                .queue_add(QueueAddPayload {
+                    path: "prefix:path6".to_string(),
+                    value: "v6".to_string(),
+                    priority: 0,
+                    orphaned: None,
+                    process_id: Some(long_id),
+                    exclusive: false,
+                    external_id: None,
+                })
+                .await;
+            assert!(res.is_err(), "process_id exceeding max length should fail");
+            assert!(res
+                .unwrap_err()
+                .to_string()
+                .contains("process_id exceeds maximum allowed length"));
+        }
+
+        RocksCacheStore::cleanup_test_cachestore("test_queue_add_validations");
+
+        Ok(())
     }
 }

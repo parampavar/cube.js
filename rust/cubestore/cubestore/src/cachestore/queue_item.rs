@@ -13,6 +13,11 @@ use std::sync::Arc;
 use crate::cachestore::QueueKey;
 use serde::{Deserialize, Deserializer, Serialize};
 
+// We use ${uuidv4()}-span-${u32}, it's 36 + 6 + 8 = 50, let's limit to 96
+pub const QUEUE_ITEM_PROCESS_ID_MAX_LEN: usize = 96;
+// We use ${uuidv4()}, it's 36, let's limit to 48
+pub const QUEUE_ITEM_EXTERNAL_ID_MAX_LEN: usize = 48;
+
 fn merge(a: serde_json::Value, b: serde_json::Value) -> Option<serde_json::Value> {
     match (a, b) {
         (mut root @ serde_json::Value::Object(_), serde_json::Value::Object(b)) => {
@@ -90,6 +95,8 @@ pub struct QueueItem {
     pub(crate) process_id: Option<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub(crate) exclusive: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) external_id: Option<String>,
 }
 
 impl RocksEntity for QueueItem {
@@ -140,6 +147,7 @@ impl QueueItem {
         orphaned: Option<u32>,
         process_id: Option<String>,
         exclusive: bool,
+        external_id: Option<String>,
     ) -> Self {
         let (prefix, key) = QueueItem::parse_path(path);
         let created = Utc::now();
@@ -164,6 +172,7 @@ impl QueueItem {
             created,
             process_id,
             exclusive,
+            external_id,
         }
     }
 
@@ -227,6 +236,10 @@ impl QueueItem {
 
     pub fn get_exclusive(&self) -> bool {
         self.exclusive
+    }
+
+    pub fn get_external_id(&self) -> &Option<String> {
+        &self.external_id
     }
 
     /// Returns whether this item should be visible to the given caller process.
@@ -349,6 +362,7 @@ pub(crate) enum QueueItemRocksIndex {
     ByPath = 1,
     ByPrefixAndStatus = 2,
     ByPrefix = 3,
+    ByExternalId = 4,
 }
 
 pub struct QueueItemRocksTable<'a> {
@@ -394,6 +408,7 @@ rocks_table_new!(QueueItem, QueueItemRocksTable, TableId::QueueItems, {
         Box::new(QueueItemRocksIndex::ByPath),
         Box::new(QueueItemRocksIndex::ByPrefixAndStatus),
         Box::new(QueueItemRocksIndex::ByPrefix),
+        Box::new(QueueItemRocksIndex::ByExternalId),
     ]
 });
 
@@ -402,6 +417,7 @@ pub enum QueueItemIndexKey {
     ByPath(String),
     ByPrefixAndStatus(String, QueueItemStatus),
     ByPrefix(String),
+    ByExternalId(Option<String>),
 }
 
 base_rocks_secondary_index!(QueueItem, QueueItemRocksIndex);
@@ -417,6 +433,9 @@ impl RocksSecondaryIndex<QueueItem, QueueItemIndexKey> for QueueItemRocksIndex {
             QueueItemRocksIndex::ByPrefix => {
                 QueueItemIndexKey::ByPrefix(row.get_prefix().clone().unwrap_or("".to_string()))
             }
+            QueueItemRocksIndex::ByExternalId => {
+                QueueItemIndexKey::ByExternalId(row.get_external_id().clone())
+            }
         }
     }
 
@@ -424,6 +443,9 @@ impl RocksSecondaryIndex<QueueItem, QueueItemIndexKey> for QueueItemRocksIndex {
         match key {
             QueueItemIndexKey::ByPath(s) => s.as_bytes().to_vec(),
             QueueItemIndexKey::ByPrefix(s) => s.as_bytes().to_vec(),
+            QueueItemIndexKey::ByExternalId(s) => {
+                s.as_deref().unwrap_or("__null__").as_bytes().to_vec()
+            }
             QueueItemIndexKey::ByPrefixAndStatus(prefix, s) => {
                 let mut r = Vec::with_capacity(prefix.len() + 1);
                 r.extend_from_slice(&prefix.as_bytes());
@@ -444,6 +466,7 @@ impl RocksSecondaryIndex<QueueItem, QueueItemIndexKey> for QueueItemRocksIndex {
             QueueItemRocksIndex::ByPath => true,
             QueueItemRocksIndex::ByPrefixAndStatus => false,
             QueueItemRocksIndex::ByPrefix => false,
+            QueueItemRocksIndex::ByExternalId => true,
         }
     }
 
@@ -452,6 +475,7 @@ impl RocksSecondaryIndex<QueueItem, QueueItemIndexKey> for QueueItemRocksIndex {
             QueueItemRocksIndex::ByPath => 1,
             QueueItemRocksIndex::ByPrefixAndStatus => 2,
             QueueItemRocksIndex::ByPrefix => 1,
+            QueueItemRocksIndex::ByExternalId => 1,
         }
     }
 
@@ -465,6 +489,13 @@ impl RocksSecondaryIndex<QueueItem, QueueItemIndexKey> for QueueItemRocksIndex {
 
     fn get_id(&self) -> IndexId {
         *self as IndexId
+    }
+
+    fn should_index_row(&self, row: &QueueItem) -> bool {
+        match self {
+            Self::ByExternalId => row.external_id.is_some(),
+            _ => true,
+        }
     }
 }
 
@@ -483,6 +514,7 @@ mod tests {
             None,
             None,
             false,
+            None,
         );
         let mut priority0_2 = QueueItem::new(
             "2".to_string(),
@@ -491,6 +523,7 @@ mod tests {
             None,
             None,
             false,
+            None,
         );
         let mut priority0_3 = QueueItem::new(
             "3".to_string(),
@@ -499,6 +532,7 @@ mod tests {
             None,
             None,
             false,
+            None,
         );
         let mut priority10_4 = QueueItem::new(
             "4".to_string(),
@@ -507,6 +541,7 @@ mod tests {
             None,
             None,
             false,
+            None,
         );
         let mut priority0_5 = QueueItem::new(
             "5".to_string(),
@@ -515,6 +550,7 @@ mod tests {
             None,
             None,
             false,
+            None,
         );
         let mut priority_n5_6 = QueueItem::new(
             "6".to_string(),
@@ -523,6 +559,7 @@ mod tests {
             None,
             None,
             false,
+            None,
         );
 
         // Force timestamps to be distinct (on systems that are too fast or have low clock resolution)
@@ -595,6 +632,7 @@ mod tests {
             None,
             Some("pid-1".to_string()),
             false,
+            None,
         );
         assert!(non_exclusive.is_visible_for(&None));
         assert!(non_exclusive.is_visible_for(&Some("pid-1".to_string())));
@@ -608,6 +646,7 @@ mod tests {
             None,
             Some("pid-1".to_string()),
             true,
+            None,
         );
         assert!(exclusive.is_visible_for(&Some("pid-1".to_string())));
         assert!(!exclusive.is_visible_for(&Some("pid-other".to_string())));
