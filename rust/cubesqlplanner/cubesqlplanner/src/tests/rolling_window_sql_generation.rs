@@ -7,8 +7,8 @@ fn create_context() -> TestContext {
     TestContext::new(schema).unwrap()
 }
 
-#[test]
-fn test_rolling_window_trailing_unbounded_no_granularity() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_rolling_window_trailing_unbounded_no_granularity() {
     let test_context = create_context();
 
     let query_yaml = indoc! {r#"
@@ -34,11 +34,16 @@ fn test_rolling_window_trailing_unbounded_no_granularity() {
         "Without granularity should not reference time_series CTE, got: {sql}"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "rolling_window_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_rolling_window_leading_unbounded_no_granularity() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_rolling_window_leading_unbounded_no_granularity() {
     let test_context = create_context();
 
     let query_yaml = indoc! {r#"
@@ -60,11 +65,16 @@ fn test_rolling_window_leading_unbounded_no_granularity() {
         "Leading unbounded should not have an upper time bound (<=), got: {sql}"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "rolling_window_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_rolling_window_both_unbounded_no_granularity() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_rolling_window_both_unbounded_no_granularity() {
     let test_context = create_context();
 
     let query_yaml = indoc! {r#"
@@ -90,11 +100,16 @@ fn test_rolling_window_both_unbounded_no_granularity() {
         "Both unbounded should not have an upper time bound (<=), got: {sql}"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "rolling_window_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_rolling_window_trailing_unbounded_with_granularity() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_rolling_window_trailing_unbounded_with_granularity() {
     let test_context = create_context();
 
     let query_yaml = indoc! {r#"
@@ -117,5 +132,10 @@ fn test_rolling_window_trailing_unbounded_with_granularity() {
         "JOIN should not have lower bound with trailing unbounded, got: {sql}"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "rolling_window_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }

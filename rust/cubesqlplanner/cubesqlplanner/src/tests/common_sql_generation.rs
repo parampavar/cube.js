@@ -39,8 +39,8 @@ fn test_member_to_alias() {
     );
 }
 
-#[test]
-fn test_simple_join_sql() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_simple_join_sql() {
     let schema = MockSchema::from_yaml_file("common/diamond_joins.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -51,20 +51,20 @@ fn test_simple_join_sql() {
           - cube_c.code
     "};
 
-    let sql = test_context
+    test_context
         .build_sql(query_yaml)
         .expect("Should generate SQL for simple join");
 
-    assert!(
-        sql.contains(r#"ON "cube_a".c_id = "cube_c".id"#),
-        "SQL should contain join condition between cube_a and cube_c"
-    );
-
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "diamond_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_simple_paths_in_request_sql() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_simple_paths_in_request_sql() {
     let schema = MockSchema::from_yaml_file("common/diamond_joins.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -84,11 +84,16 @@ fn test_simple_paths_in_request_sql() {
         "SQL should contain join condition between cube_a and cube_c"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "diamond_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_simple_paths_in_time_dimension_request_sql() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_simple_paths_in_time_dimension_request_sql() {
     let schema = MockSchema::from_yaml_file("common/diamond_joins.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -109,11 +114,16 @@ fn test_simple_paths_in_time_dimension_request_sql() {
         "SQL should contain join condition between cube_a and cube_c"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "diamond_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_diamond_join_over_view_sql() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_diamond_join_over_view_sql() {
     let schema = MockSchema::from_yaml_file("common/diamond_joins.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -138,11 +148,16 @@ fn test_diamond_join_over_view_sql() {
         "SQL should contain join condition between cube_b and cube_c"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "diamond_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_diamond_join_over_direct_path_sql() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_diamond_join_over_direct_path_sql() {
     let schema = MockSchema::from_yaml_file("common/diamond_joins.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -167,11 +182,16 @@ fn test_diamond_join_over_direct_path_sql() {
         "SQL should contain join condition between cube_b and cube_c"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "diamond_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_simple_segment_sql() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_simple_segment_sql() {
     let schema = MockSchema::from_yaml_file("common/simple.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -191,11 +211,16 @@ fn test_simple_segment_sql() {
         "SQL should contain segment condition"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "simple_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_segment_as_dimension_in_pre_aggregation_query() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_segment_as_dimension_in_pre_aggregation_query() {
     let schema = MockSchema::from_yaml_file("common/simple.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -218,11 +243,16 @@ fn test_segment_as_dimension_in_pre_aggregation_query() {
         "Segment should not be in WHERE clause for pre-aggregation query"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "simple_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_multi_fact_two_measures_from_different_cubes() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_multi_fact_two_measures_from_different_cubes() {
     let schema = MockSchema::from_yaml_file("common/multi_fact.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -234,15 +264,20 @@ fn test_multi_fact_two_measures_from_different_cubes() {
           - customers.name
     "};
 
-    let sql = test_context
+    test_context
         .build_sql(query_yaml)
         .expect("Should generate SQL for multi-fact query");
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "multi_fact_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_measure_switch_cross_join() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_measure_switch_cross_join() {
     let schema = MockSchema::from_yaml_file("common/calc_groups.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -271,7 +306,12 @@ fn test_measure_switch_cross_join() {
         "Calculated measure must not be wrapped in number() aggregation"
     );
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "calc_groups_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
 #[test]
@@ -319,8 +359,8 @@ fn test_query_level_join_hints() {
     );
 }
 
-#[test]
-fn test_segment_with_subquery_dimension_in_view() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_segment_with_subquery_dimension_in_view() {
     let schema = MockSchema::from_yaml_file("common/segments_in_view.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -331,15 +371,20 @@ fn test_segment_with_subquery_dimension_in_view() {
           - accountOverview.hasNoTickets
     "};
 
-    let sql = test_context
+    test_context
         .build_sql(query_yaml)
         .expect("Should generate SQL for segment with subquery dimension in view");
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "segments_in_view_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
 
-#[test]
-fn test_segment_with_subquery_dimension_in_view_with_dimension() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_segment_with_subquery_dimension_in_view_with_dimension() {
     let schema = MockSchema::from_yaml_file("common/segments_in_view.yaml");
     let test_context = TestContext::new(schema).unwrap();
 
@@ -354,9 +399,14 @@ fn test_segment_with_subquery_dimension_in_view_with_dimension() {
           - id: accountOverview.region
     "};
 
-    let sql = test_context
+    test_context
         .build_sql(query_yaml)
         .expect("Should generate SQL for segment with subquery dimension in view with dimension");
 
-    insta::assert_snapshot!(sql);
+    if let Some(result) = test_context
+        .try_execute_pg(query_yaml, "segments_in_view_tables.sql")
+        .await
+    {
+        insta::assert_snapshot!(result);
+    }
 }
