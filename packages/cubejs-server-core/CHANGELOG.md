@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.25](https://github.com/cube-js/cube/compare/v1.6.24...v1.6.25) (2026-03-20)
+
+### Bug Fixes
+
+- **server-core:** Restore log level inheritance ([#10532](https://github.com/cube-js/cube/issues/10532)) ([703d631](https://github.com/cube-js/cube/commit/703d6312e49521eb188e0c3cd24af16400934b95)), closes [#10144](https://github.com/cube-js/cube/issues/10144)
+
 ## [1.6.24](https://github.com/cube-js/cube/compare/v1.6.23...v1.6.24) (2026-03-18)
 
 **Note:** Version bump only for package @cubejs-backend/server-core

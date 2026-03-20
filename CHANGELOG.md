@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.25](https://github.com/cube-js/cube/compare/v1.6.24...v1.6.25) (2026-03-20)
+
+### Bug Fixes
+
+- **cubestore:** Queue - filter expired queue_results ([#10527](https://github.com/cube-js/cube/issues/10527)) ([fc51856](https://github.com/cube-js/cube/commit/fc5185672cab1199683422e5bddbaba663a1ef38))
+- **docs:** Prevent scroll jump on CodeTabs tab switch ([#10523](https://github.com/cube-js/cube/issues/10523)) ([2270e28](https://github.com/cube-js/cube/commit/2270e28ecee10a45605e92a22d76ee325923fee1))
+- **server-core:** Restore log level inheritance ([#10532](https://github.com/cube-js/cube/issues/10532)) ([703d631](https://github.com/cube-js/cube/commit/703d6312e49521eb188e0c3cd24af16400934b95)), closes [#10144](https://github.com/cube-js/cube/issues/10144)
+
+### Features
+
+- **cubestore:** Queue - introduce external_id support ([#10507](https://github.com/cube-js/cube/issues/10507)) ([73f17b7](https://github.com/cube-js/cube/commit/73f17b7117f740444e445cdfa6b96cc48ee00b44))
+- **cubestore:** Queue - support QUEUE RESULT by $id ([#10529](https://github.com/cube-js/cube/issues/10529)) ([ef98588](https://github.com/cube-js/cube/commit/ef9858857bd933559afe51d211a92fad9067bab0))
+
 ## [1.6.24](https://github.com/cube-js/cube/compare/v1.6.23...v1.6.24) (2026-03-18)
 
 ### Bug Fixes
