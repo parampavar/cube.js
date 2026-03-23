@@ -3,16 +3,17 @@ use crate::cube_bridge::join_hints::JoinHintItem;
 use crate::logical_plan::PreAggregation;
 #[cfg(feature = "integration-postgres")]
 use crate::logical_plan::{PreAggregationSource, PreAggregationTable};
+use crate::plan::Filter;
 use crate::planner::filter::base_segment::BaseSegment;
 use crate::planner::query_tools::QueryTools;
 use crate::planner::sql_evaluator::sql_nodes::SqlNodesFactory;
 use crate::planner::sql_evaluator::{MemberSymbol, SqlEvaluatorVisitor, TimeDimensionSymbol};
 use crate::planner::sql_templates::PlanSqlTemplates;
 use crate::planner::top_level_planner::TopLevelPlanner;
-use crate::planner::{GranularityHelper, QueryProperties};
+use crate::planner::{GranularityHelper, QueryProperties, VisitorContext};
 use crate::test_fixtures::cube_bridge::yaml::YamlBaseQueryOptions;
 use crate::test_fixtures::cube_bridge::{
-    members_from_strings, MockBaseQueryOptions, MockSchema, MockSecurityContext,
+    members_from_strings, MockBaseQueryOptions, MockBaseTools, MockSchema, MockSecurityContext,
 };
 use chrono_tz::Tz;
 use cubenativeutils::CubeError;
@@ -28,6 +29,34 @@ pub struct TestContext {
 impl TestContext {
     pub fn new(schema: MockSchema) -> Result<Self, CubeError> {
         Self::new_with_options(schema, Tz::UTC, None, None, false)
+    }
+
+    #[allow(dead_code)]
+    pub fn new_with_base_tools(
+        schema: MockSchema,
+        base_tools: MockBaseTools,
+    ) -> Result<Self, CubeError> {
+        let join_graph = Rc::new(schema.create_join_graph()?);
+        let evaluator = schema.clone().create_evaluator();
+        let security_context: Rc<dyn crate::cube_bridge::security_context::SecurityContext> =
+            Rc::new(MockSecurityContext);
+
+        let query_tools = QueryTools::try_new(
+            evaluator,
+            security_context.clone(),
+            Rc::new(base_tools),
+            join_graph,
+            Some(Tz::UTC.to_string()),
+            false,
+            None,
+            None,
+        )?;
+
+        Ok(Self {
+            schema,
+            query_tools,
+            security_context,
+        })
     }
 
     #[allow(dead_code)]
@@ -540,6 +569,53 @@ impl TestContext {
             result = result.replace(&placeholder, &format!("'{}'", escaped));
         }
         result
+    }
+
+    pub fn build_filter_sql(&self, yaml: &str) -> Result<(String, Vec<String>), CubeError> {
+        let props = self.create_query_properties(yaml)?;
+
+        let filter = Filter {
+            items: props
+                .dimensions_filters()
+                .iter()
+                .chain(props.time_dimensions_filters().iter())
+                .chain(props.measures_filters().iter())
+                .cloned()
+                .collect(),
+        };
+
+        let nodes_factory = SqlNodesFactory::default();
+        let context = Rc::new(VisitorContext::new(
+            self.query_tools.clone(),
+            &nodes_factory,
+            None,
+        ));
+        let base_tools = self.query_tools.base_tools();
+        let driver_tools = base_tools.driver_tools(false)?;
+        let templates = PlanSqlTemplates::try_new(driver_tools, false)?;
+
+        let sql = filter.to_sql(&templates, context)?;
+        let params = self.query_tools.get_allocated_params();
+        Ok((sql, params))
+    }
+
+    pub fn build_base_filter_sql(
+        &self,
+        base_filter: &Rc<crate::planner::filter::base_filter::BaseFilter>,
+    ) -> Result<(String, Vec<String>), CubeError> {
+        let nodes_factory = SqlNodesFactory::default();
+        let context = Rc::new(VisitorContext::new(
+            self.query_tools.clone(),
+            &nodes_factory,
+            None,
+        ));
+        let base_tools = self.query_tools.base_tools();
+        let driver_tools = base_tools.driver_tools(false)?;
+        let templates = PlanSqlTemplates::try_new(driver_tools, false)?;
+
+        let sql = base_filter.to_sql(context, &templates)?;
+        let params = self.query_tools.get_allocated_params();
+        Ok((sql, params))
     }
 }
 

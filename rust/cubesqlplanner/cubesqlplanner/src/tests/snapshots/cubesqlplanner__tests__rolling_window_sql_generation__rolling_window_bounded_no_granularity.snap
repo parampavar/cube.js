@@ -1,0 +1,7 @@
+---
+source: cubesqlplanner/src/tests/rolling_window_sql_generation.rs
+expression: result
+---
+test_cube__val_bounded
+----------------------
+120.00
