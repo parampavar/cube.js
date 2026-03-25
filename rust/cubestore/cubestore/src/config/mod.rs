@@ -556,6 +556,10 @@ pub trait ConfigObj: DIService {
     fn remote_files_cleanup_batch_size(&self) -> u64;
 
     fn create_table_max_retries(&self) -> u64;
+
+    fn max_joined_partitions(&self) -> usize;
+
+    fn max_joined_partitions_message(&self) -> &str;
 }
 
 #[derive(Debug, Clone)]
@@ -661,6 +665,8 @@ pub struct ConfigObjImpl {
     pub remote_files_cleanup_delay_secs: u64,
     pub remote_files_cleanup_batch_size: u64,
     pub create_table_max_retries: u64,
+    pub max_joined_partitions: usize,
+    pub max_joined_partitions_message: String,
 }
 
 crate::di_service!(ConfigObjImpl, [ConfigObj]);
@@ -1046,6 +1052,14 @@ impl ConfigObj for ConfigObjImpl {
 
     fn create_table_max_retries(&self) -> u64 {
         self.create_table_max_retries
+    }
+
+    fn max_joined_partitions(&self) -> usize {
+        self.max_joined_partitions
+    }
+
+    fn max_joined_partitions_message(&self) -> &str {
+        &self.max_joined_partitions_message
     }
 
     fn cachestore_cache_eviction_below_threshold(&self) -> u8 {
@@ -1593,6 +1607,8 @@ impl Config {
                     50000,
                 ),
                 create_table_max_retries: env_parse("CUBESTORE_CREATE_TABLE_MAX_RETRIES", 3),
+                max_joined_partitions: env_parse("CUBESTORE_MAX_JOINED_PARTITIONS", 5),
+                max_joined_partitions_message: "Please consider reducing right hand side join partition count and dataset size.".to_string(),
             }),
         }
     }
@@ -1740,6 +1756,8 @@ impl Config {
                 remote_files_cleanup_delay_secs: 3600,
                 remote_files_cleanup_batch_size: 50000,
                 create_table_max_retries: 3,
+                max_joined_partitions: 5,
+                max_joined_partitions_message: "Please consider reducing right hand side join partition count and dataset size.".to_string(),
             }
         }
     }
