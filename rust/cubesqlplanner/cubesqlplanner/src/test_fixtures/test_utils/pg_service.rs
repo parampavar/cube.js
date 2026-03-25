@@ -1,4 +1,6 @@
+use std::mem::ManuallyDrop;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::OnceLock;
 use testcontainers::core::{CmdWaitFor, ExecCommand};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::ImageExt;
@@ -9,9 +11,33 @@ use tokio_postgres::{Client, NoTls};
 type PgContainer = testcontainers::ContainerAsync<Postgres>;
 
 struct PgInstance {
-    _container: PgContainer,
+    // ManuallyDrop prevents async Drop which panics when tokio runtime is gone at process exit.
+    // Cleanup is handled by atexit callback instead.
+    _container: ManuallyDrop<PgContainer>,
     host: String,
     port: u16,
+}
+
+// TODO: Remove manual atexit cleanup once testcontainers-rs supports Ryuk.
+// See: https://github.com/testcontainers/testcontainers-rs/issues/577
+static CLEANUP_CONTAINER_ID: OnceLock<String> = OnceLock::new();
+
+extern "C" fn cleanup_container() {
+    if let Some(id) = CLEANUP_CONTAINER_ID.get() {
+        let _ = std::process::Command::new("docker")
+            .args(["rm", "-f", id])
+            .output();
+    }
+}
+
+fn register_atexit_cleanup(container_id: String) {
+    CLEANUP_CONTAINER_ID.set(container_id).ok();
+    extern "C" {
+        fn atexit(cb: extern "C" fn()) -> std::os::raw::c_int;
+    }
+    unsafe {
+        atexit(cleanup_container);
+    }
 }
 
 static PG_INSTANCE: OnceCell<PgInstance> = OnceCell::const_new();
@@ -47,8 +73,10 @@ async fn init_pg() -> PgInstance {
         .await
         .expect("Failed to get container port");
 
+    register_atexit_cleanup(container.id().to_string());
+
     PgInstance {
-        _container: container,
+        _container: ManuallyDrop::new(container),
         host,
         port,
     }
