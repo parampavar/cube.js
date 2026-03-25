@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.28](https://github.com/cube-js/cube/compare/v1.6.27...v1.6.28) (2026-03-25)
+
+### Bug Fixes
+
+- **cubestore:** Respect nulls for unique indexes with skip ([#10553](https://github.com/cube-js/cube/issues/10553)) ([e27868c](https://github.com/cube-js/cube/commit/e27868c62f46d94b958bf5a33718c15eaa7fdec8))
+- Value for custom-time/numeric format for /v1/load annotations ([#10554](https://github.com/cube-js/cube/issues/10554)) ([5f432d8](https://github.com/cube-js/cube/commit/5f432d8019bc7124542f74249ddf76adeb90c163))
+
+### Features
+
+- **cubestore:** Partition distribution for join ([#10480](https://github.com/cube-js/cube/issues/10480)) ([9da75cd](https://github.com/cube-js/cube/commit/9da75cdf0ef42efeb9288ea8b76f3a9d7488082e))
+
 ## [1.6.27](https://github.com/cube-js/cube/compare/v1.6.26...v1.6.27) (2026-03-24)
 
 ### Features
