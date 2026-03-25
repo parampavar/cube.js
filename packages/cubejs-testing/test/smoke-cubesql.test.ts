@@ -169,7 +169,7 @@ describe('SQL API', () => {
       const execute = () => new Promise<void>((resolve, reject) => {
         const onData = jest.fn((chunk: Buffer) => {
           const chunkStr = chunk.toString('utf-8');
-          
+
           if (isFirstChunk) {
             isFirstChunk = false;
             const json = JSON.parse(chunkStr);
@@ -201,13 +201,13 @@ describe('SQL API', () => {
       });
 
       await execute();
-      
+
       // Verify schema was sent first
       expect(schemaReceived).toBe(true);
-      
+
       // Verify empty data was sent
       expect(emptyDataReceived).toBe(true);
-      
+
       // Verify no actual rows were returned
       const dataLines = data.split('\n').filter((it) => it.trim());
       if (dataLines.length > 0) {
@@ -216,6 +216,29 @@ describe('SQL API', () => {
           .reduce((a, b) => a + b, 0);
         expect(rows).toBe(0);
       }
+    });
+
+    it('includes format in schema columns', async () => {
+      const response = await fetch(`${birdbox.configuration.apiUrl}/cubesql`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          query: 'SELECT DATE_TRUNC(\'year\', createdAt) AS createdAt, totalAmount, numberTotal, status FROM Orders LIMIT 1',
+        }),
+      });
+
+      const text = await response.text();
+      const { schema } = JSON.parse(text.split('\n')[0]);
+
+      expect(schema).toEqual([
+        { name: 'createdAt', column_type: 'Timestamp', format: { type: 'custom-time', value: '%Y-%m-%d' } },
+        { name: 'totalAmount', column_type: 'Double', format: 'currency' },
+        { name: 'numberTotal', column_type: 'Double', format: { type: 'custom-numeric', value: '$,.2f' } },
+        { name: 'status', column_type: 'String' },
+      ]);
     });
 
     describe('sql4sql', () => {

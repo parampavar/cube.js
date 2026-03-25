@@ -47,13 +47,15 @@ cube(`Orders`, {
     totalAmount: {
       sql: `amount`,
       type: `sum`,
+      format: `currency`,
     },
     toRemove: {
       type: `count`,
     },
     numberTotal: {
       sql: `${totalAmount}`,
-      type: `number`
+      type: `number`,
+      format: '$,.2f',
     },
     amountRank: {
       multi_stage: true,
@@ -121,7 +123,8 @@ cube(`Orders`, {
 
     createdAt: {
       sql: `created_at`,
-      type: `time`
+      type: `time`,
+      format: '%Y-%m-%d',
     },
 
     updatedAt: {
