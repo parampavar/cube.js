@@ -218,6 +218,28 @@ describe('SQL API', () => {
       }
     });
 
+    it('includes format in schema for measures and time dimensions', async () => {
+      const response = await fetch(`${birdbox.configuration.apiUrl}/cubesql`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          query: "SELECT DATE_TRUNC('year', createdAt) AS createdAt, totalAmount, status FROM Orders LIMIT 1",
+        }),
+      });
+
+      const text = await response.text();
+      const schema = JSON.parse(text.split('\n')[0]).schema;
+
+      expect(schema).toEqual([
+        { name: 'createdAt', column_type: 'Timestamp' },
+        { name: 'totalAmount', column_type: 'Double', format: 'currency' },
+        { name: 'status', column_type: 'String' },
+      ]);
+    });
+
     describe('sql4sql', () => {
       async function generateSql(query: string, disablePostPprocessing: boolean = false) {
         const response = await fetch(`${birdbox.configuration.apiUrl}/sql`, {
