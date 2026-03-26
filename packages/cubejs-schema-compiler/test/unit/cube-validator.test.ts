@@ -1676,6 +1676,177 @@ describe('Cube Validation', () => {
       expect(validationResult.error).toBeTruthy();
     });
 
+    describe('Currency property', () => {
+      it('measure with valid currency (lowercase input) - correct', async () => {
+        const cubeValidator = new CubeValidator(new CubeSymbols());
+        const cube = {
+          name: 'name',
+          sql: () => 'SELECT * FROM public.Orders',
+          measures: {
+            amount: {
+              sql: () => 'amount',
+              type: 'sum',
+              currency: 'usd'
+            },
+          },
+          fileName: 'fileName',
+        };
+
+        const validationResult = cubeValidator.validate(cube, new ConsoleErrorReporter());
+        expect(validationResult.error).toBeFalsy();
+      });
+
+      it('measure with invalid currency (too long) - error', async () => {
+        const cubeValidator = new CubeValidator(new CubeSymbols());
+        const cube = {
+          name: 'name',
+          sql: () => 'SELECT * FROM public.Orders',
+          measures: {
+            amount: {
+              sql: () => 'amount',
+              type: 'sum',
+              currency: 'usdx'
+            },
+          },
+          fileName: 'fileName',
+        };
+
+        const validationResult = cubeValidator.validate(cube, new ConsoleErrorReporter());
+        expect(validationResult.error).toBeTruthy();
+        expect(validationResult.error!.message).toContain(
+          '"usdx" is not a valid currency code. Expected a valid 3-letter ISO 4217 code (e.g. USD, EUR)'
+        );
+      });
+
+      it('measure with invalid currency (too short) - error', async () => {
+        const cubeValidator = new CubeValidator(new CubeSymbols());
+        const cube = {
+          name: 'name',
+          sql: () => 'SELECT * FROM public.Orders',
+          measures: {
+            amount: {
+              sql: () => 'amount',
+              type: 'sum',
+              currency: 'us'
+            },
+          },
+          fileName: 'fileName',
+        };
+
+        const validationResult = cubeValidator.validate(cube, new ConsoleErrorReporter());
+        expect(validationResult.error).toBeTruthy();
+        expect(validationResult.error!.message).toContain(
+          '"us" is not a valid currency code. Expected a valid 3-letter ISO 4217 code (e.g. USD, EUR)'
+        );
+      });
+
+      it('measure with invalid currency (numeric) - error', async () => {
+        const cubeValidator = new CubeValidator(new CubeSymbols());
+        const cube = {
+          name: 'name',
+          sql: () => 'SELECT * FROM public.Orders',
+          measures: {
+            amount: {
+              sql: () => 'amount',
+              type: 'sum',
+              currency: '123'
+            },
+          },
+          fileName: 'fileName',
+        };
+
+        const validationResult = cubeValidator.validate(cube, new ConsoleErrorReporter());
+        expect(validationResult.error).toBeTruthy();
+        expect(validationResult.error!.message).toContain(
+          '"123" is not a valid currency code. Expected a valid 3-letter ISO 4217 code (e.g. USD, EUR)'
+        );
+      });
+
+      it('number dimension with valid currency - correct', async () => {
+        const cubeValidator = new CubeValidator(new CubeSymbols());
+        const cube = {
+          name: 'name',
+          sql: () => 'SELECT * FROM public.Orders',
+          dimensions: {
+            price: {
+              sql: () => 'price',
+              type: 'number',
+              currency: 'eur'
+            },
+          },
+          fileName: 'fileName',
+        };
+
+        const validationResult = cubeValidator.validate(cube, new ConsoleErrorReporter());
+        expect(validationResult.error).toBeFalsy();
+      });
+
+      it('non-number dimension with currency - error', async () => {
+        const cubeValidator = new CubeValidator(new CubeSymbols());
+        const cube = {
+          name: 'name',
+          sql: () => 'SELECT * FROM public.Orders',
+          dimensions: {
+            status: {
+              sql: () => 'status',
+              type: 'string',
+              currency: 'usd'
+            },
+          },
+          fileName: 'fileName',
+        };
+
+        const validationResult = cubeValidator.validate(cube, new ConsoleErrorReporter());
+        expect(validationResult.error).toBeTruthy();
+        const nestedMessages = validationResult.error!.details[0]?.context?.details?.map((d: any) => d.message);
+        expect(nestedMessages).toContain(
+          '"currency" property can only be used with dimensions of type "number"'
+        );
+      });
+
+      it('non-numeric measure with currency - error', async () => {
+        const cubeValidator = new CubeValidator(new CubeSymbols());
+        const cube = {
+          name: 'name',
+          sql: () => 'SELECT * FROM public.Orders',
+          measures: {
+            label: {
+              sql: () => 'label',
+              type: 'string',
+              currency: 'usd'
+            },
+          },
+          fileName: 'fileName',
+        };
+
+        const validationResult = cubeValidator.validate(cube, new ConsoleErrorReporter());
+        expect(validationResult.error).toBeTruthy();
+        expect(validationResult.error!.message).toEqual(
+          '"currency" property can only be used with numeric measures, actual type: string'
+        );
+      });
+
+      it('measure with both format and currency - correct', async () => {
+        const cubeValidator = new CubeValidator(new CubeSymbols());
+        const cube = {
+          name: 'name',
+          sql: () => 'SELECT * FROM public.Orders',
+          measures: {
+            amount: {
+              sql: () => 'amount',
+              type: 'sum',
+              format: 'currency',
+              currency: 'gbp'
+            },
+          },
+          fileName: 'fileName',
+        };
+
+        const validationResult = cubeValidator.validate(cube, new ConsoleErrorReporter());
+        expect(validationResult.error).toBeFalsy();
+      });
+    });
+
     it('dimension with valid order asc - correct', async () => {
       const cubeValidator = new CubeValidator(new CubeSymbols());
       const cube = {
