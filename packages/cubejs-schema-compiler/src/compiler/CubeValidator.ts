@@ -4,6 +4,7 @@ import cronParser from 'cron-parser';
 import { CubeSymbols, CubeDefinition, ToString } from './CubeSymbols';
 import type { ErrorReporter } from './ErrorReporter';
 import { CompilerInterface } from './PrepareCompiler';
+import { NAMED_NUMERIC_FORMATS } from './named-numeric-formats';
 
 /* *****************************
  * ATTENTION:
@@ -112,13 +113,14 @@ const GranularityInterval = Joi.string().pattern(/^\d+\s+(second|minute|hour|day
 // Do not allow negative intervals for granularities, while offsets could be negative
 const GranularityOffset = Joi.string().pattern(/^-?(\d+\s+)(second|minute|hour|day|week|month|quarter|year)s?(\s-?\d+\s+(second|minute|hour|day|week|month|quarter|year)s?){0,7}$/, 'granularity offset');
 
-const formatSchema = Joi.alternatives([
+const formatAlternatives = [
   Joi.string().valid('imageUrl', 'link', 'currency', 'percent', 'number', 'id'),
   Joi.object().keys({
     type: Joi.string().valid('link'),
     label: Joi.string().required()
   })
-]);
+];
+const formatSchema = Joi.alternatives(formatAlternatives);
 
 // POSIX strftime specification (IEEE Std 1003.1 / POSIX.1) with d3-time-format extensions
 // See: https://pubs.opengroup.org/onlinepubs/009695399/functions/strptime.html
@@ -249,13 +251,25 @@ const customNumericFormatSchema = Joi.string().custom((value, helper) => {
   return value;
 });
 
+const namedNumericFormatSchema = Joi.string().custom((value, helper) => {
+  if (value in NAMED_NUMERIC_FORMATS) {
+    return value;
+  }
+
+  return helper.message({
+    custom: `"${value}" is not a valid named numeric format. Valid named formats: number, percent, currency, id, abbr, accounting (with optional _N decimal suffix, e.g. percent_3)`
+  });
+});
+
 const measureFormatSchema = Joi.alternatives([
   Joi.string().valid('percent', 'currency', 'number'),
+  namedNumericFormatSchema,
   customNumericFormatSchema
 ]);
 
 const dimensionNumericFormatSchema = Joi.alternatives([
-  formatSchema,
+  ...formatAlternatives,
+  namedNumericFormatSchema,
   customNumericFormatSchema
 ]);
 
