@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.29](https://github.com/cube-js/cube/compare/v1.6.28...v1.6.29) (2026-03-27)
+
+**Note:** Version bump only for package @cubejs-backend/sqlite-driver
+
 ## [1.6.28](https://github.com/cube-js/cube/compare/v1.6.27...v1.6.28) (2026-03-25)
 
 **Note:** Version bump only for package @cubejs-backend/sqlite-driver

@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.29](https://github.com/cube-js/cube/compare/v1.6.28...v1.6.29) (2026-03-27)
+
+### Features
+
+- Expose alias for named numeric format ([#10568](https://github.com/cube-js/cube/issues/10568)) ([662bc58](https://github.com/cube-js/cube/commit/662bc581c38c87eddb40505dd1847f1f2c79bac9))
+- **schema-compiler:** Support currency for numeric measures and dimensions ([#10561](https://github.com/cube-js/cube/issues/10561)) ([5fc721f](https://github.com/cube-js/cube/commit/5fc721f98429cc46395673b03283c501a59c5cdd))
+
 ## [1.6.28](https://github.com/cube-js/cube/compare/v1.6.27...v1.6.28) (2026-03-25)
 
 **Note:** Version bump only for package @cubejs-backend/api-gateway
