@@ -1,6 +1,6 @@
 ---
 title: Amazon Athena
-description: "- [A set of IAM credentials][aws-docs-athena-access] which allow access to [AWS Athena][aws-athena] - [The AWS region][aws-docs-regions] - [The S3..."
+description: Give Cube IAM access to Athena, an S3 query-results path, region and catalog settings, plus optional assumed-role credentials.
 ---
 
 # Amazon Athena
@@ -51,7 +51,7 @@ When using role assumption:
 
 ### Cube Cloud
 
-<InfoBox heading="Allowing connections from Cube Cloud IP">
+<Info>
 
 In some cases you'll need to allow connections from your Cube Cloud deployment
 IP address to your database. You can copy the IP address from either the
