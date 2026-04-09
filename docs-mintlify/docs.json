@@ -246,10 +246,9 @@
             "group": "Deployment",
             "pages": [
               "admin/deployment/index",
+              "admin/deployment/deployment-types",
               "admin/deployment/infrastructure",
               "admin/deployment/environments",
-              "admin/deployment/deployments",
-              "admin/deployment/deployment-types",
               "admin/deployment/continuous-deployment",
               "admin/deployment/custom-domains",
               "admin/deployment/warm-up",
@@ -326,6 +325,7 @@
               "admin/ai/index",
               "admin/ai/spaces-agents-models",
               "admin/ai/agent-rules",
+              "admin/ai/bring-your-own-model",
               "admin/ai/memory-isolation"
             ]
           },
@@ -333,9 +333,10 @@
           {
             "group": "Account & Billing",
             "pages": [
+              "admin/account-billing/ai-tokens",
               "admin/account-billing/api-keys",
+              "admin/account-billing/billing-faq",
               "admin/account-billing/budgets",
-              "admin/account-billing/pricing",
               "admin/account-billing/distribution",
               "admin/account-billing/support"
             ]
@@ -506,6 +507,7 @@
           {
             "group": "Deployment",
             "pages": [
+              "cube-core/architecture",
               "cube-core/deployment",
               "cube-core/running-in-production"
             ]
