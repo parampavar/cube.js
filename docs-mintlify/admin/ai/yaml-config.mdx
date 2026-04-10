@@ -285,6 +285,12 @@ All YAML and Markdown files are merged together. The system validates that space
 
 Spaces define isolated environments where agents operate and share context.
 
+<Warning>
+
+Spaces and agents must first be created through the Cube Cloud UI before they can be configured via YAML. A space discovers available deployments based on its assigned agents, so you must create at least one agent in the UI and assign it to the space before YAML configuration from that deployment becomes visible. When selecting a YAML-configured agent in the UI, the system matches it to the corresponding space and agent by the `name` field.
+
+</Warning>
+
 ```yaml
 spaces:
   - name: analytics-space          # Required: unique identifier
