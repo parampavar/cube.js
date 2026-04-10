@@ -326,7 +326,8 @@
               "admin/ai/spaces-agents-models",
               "admin/ai/agent-rules",
               "admin/ai/bring-your-own-model",
-              "admin/ai/memory-isolation"
+              "admin/ai/memory-isolation",
+              "admin/ai/yaml-config"
             ]
           },
          
