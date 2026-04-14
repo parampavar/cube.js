@@ -820,6 +820,53 @@ describe('Cube RBAC Engine', () => {
       );
       expect(res.rows.length).toBeGreaterThan(0);
     });
+
+    test('userAttributes shorthand in mask sql', async () => {
+      const res = await connection.query(
+        'SELECT * FROM sc_ua_mask_test LIMIT 5'
+      );
+      expect(res.rows.length).toBeGreaterThan(0);
+      for (const row of res.rows) {
+        // mask.sql is CAST(${userAttributes.tenantId} AS INTEGER)
+        // sc_test user has tenantId = '1', so masked_price should be 1
+        expect(row.masked_price).toBe(1);
+      }
+    });
+
+    test('CUBE context in mask sql', async () => {
+      const res = await connection.query(
+        'SELECT * FROM sc_cube_mask_test LIMIT 5'
+      );
+      expect(res.rows.length).toBeGreaterThan(0);
+      for (const row of res.rows) {
+        // mask.sql is ${CUBE}.product_id * -1, so masked_product should be negative
+        expect(row.masked_product).toBeLessThan(0);
+      }
+    });
+
+    test('userAttributes shorthand in YAML mask sql', async () => {
+      const res = await connection.query(
+        'SELECT * FROM yaml_ua_mask_test LIMIT 5'
+      );
+      expect(res.rows.length).toBeGreaterThan(0);
+      for (const row of res.rows) {
+        // sc_test user has tenantId = '1', so the CASE WHEN evaluates to true
+        // and masked_status should be the actual product_id (positive)
+        expect(row.masked_status).toBeGreaterThan(0);
+      }
+    });
+
+    test('joined cube reference in mask sql', async () => {
+      const res = await connection.query(
+        'SELECT * FROM sc_joined_mask_test LIMIT 5'
+      );
+      expect(res.rows.length).toBeGreaterThan(0);
+      for (const row of res.rows) {
+        // mask.sql is ${orders.id} which joins orders and returns orders.id
+        // The join should be resolved and masked_order_id should be a positive integer
+        expect(row.masked_order_id).toBeGreaterThan(0);
+      }
+    });
   });
 
   describe('SECURITY_CONTEXT.cubeCloud features via REST API', () => {
@@ -882,6 +929,59 @@ describe('Cube RBAC Engine', () => {
       const rows = result.rawData();
       expect(rows.length).toBe(1);
       expect(rows[0]['sc_groups_shorthand_test.count']).toBeDefined();
+    });
+
+    test('userAttributes shorthand in mask sql via REST', async () => {
+      const result = await scClient.load({
+        measures: ['sc_ua_mask_test.count'],
+        dimensions: ['sc_ua_mask_test.masked_price'],
+      });
+      const rows = result.rawData();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        // mask.sql is CAST(${userAttributes.tenantId} AS INTEGER)
+        // sc_test user has tenantId = '1', so masked_price should be 1
+        expect(row['sc_ua_mask_test.masked_price']).toBe(1);
+      }
+    });
+
+    test('CUBE context in mask sql via REST', async () => {
+      const result = await scClient.load({
+        measures: ['sc_cube_mask_test.count'],
+        dimensions: ['sc_cube_mask_test.masked_product'],
+      });
+      const rows = result.rawData();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        // mask.sql is ${CUBE}.product_id * -1, so masked_product should be negative
+        expect(row['sc_cube_mask_test.masked_product']).toBeLessThan(0);
+      }
+    });
+
+    test('userAttributes shorthand in YAML mask sql via REST', async () => {
+      const result = await scClient.load({
+        measures: ['yaml_ua_mask_test.count'],
+        dimensions: ['yaml_ua_mask_test.masked_status'],
+      });
+      const rows = result.rawData();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        // sc_test user has tenantId = '1', so masked_status should be actual product_id
+        expect(row['yaml_ua_mask_test.masked_status']).toBeGreaterThan(0);
+      }
+    });
+
+    test('joined cube reference in mask sql via REST', async () => {
+      const result = await scClient.load({
+        measures: ['sc_joined_mask_test.count'],
+        dimensions: ['sc_joined_mask_test.masked_order_id'],
+      });
+      const rows = result.rawData();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        // mask.sql references ${orders.id} from a joined cube — the join must be resolved
+        expect(row['sc_joined_mask_test.masked_order_id']).toBeGreaterThan(0);
+      }
     });
   });
 
@@ -976,6 +1076,171 @@ describe('Cube RBAC Engine', () => {
       });
       // order_open should return all values since it has no access policy
       expect(result.rawData()).toMatchSnapshot('orders_open_rest');
+    });
+  });
+});
+
+describe('Cube RBAC Engine [Tesseract]', () => {
+  jest.setTimeout(60 * 5 * 1000);
+  let db: StartedTestContainer;
+  let birdbox: BirdBox;
+
+  beforeAll(async () => {
+    db = await PostgresDBRunner.startContainer({});
+    await PostgresDBRunner.loadEcom(db);
+    birdbox = await getBirdbox(
+      'postgres',
+      {
+        ...DEFAULT_CONFIG,
+        CUBEJS_DEV_MODE: 'false',
+        NODE_ENV: 'production',
+        //
+        CUBEJS_DB_TYPE: 'postgres',
+        CUBEJS_DB_HOST: db.getHost(),
+        CUBEJS_DB_PORT: `${db.getMappedPort(5432)}`,
+        CUBEJS_DB_NAME: 'test',
+        CUBEJS_DB_USER: 'test',
+        CUBEJS_DB_PASS: 'test',
+        //
+        CUBEJS_PG_SQL_PORT: `${PG_PORT}`,
+        CUBESQL_SQL_PUSH_DOWN: 'true',
+      },
+      {
+        schemaDir: 'rbac/model',
+        cubejsConfig: 'rbac/cube.js',
+      }
+    );
+  }, JEST_BEFORE_ALL_DEFAULT_TIMEOUT);
+
+  afterAll(async () => {
+    await birdbox.stop();
+    await db.stop();
+  }, JEST_AFTER_ALL_DEFAULT_TIMEOUT);
+
+  describe('Shorthand and mask tests via SQL API [Tesseract]', () => {
+    let connection: PgClient;
+
+    beforeAll(async () => {
+      connection = await createPostgresClient('sc_test', 'sc_test_password');
+    });
+
+    afterAll(async () => {
+      await connection.end();
+    }, JEST_AFTER_ALL_DEFAULT_TIMEOUT);
+
+    test('userAttributes shorthand in mask sql', async () => {
+      const res = await connection.query(
+        'SELECT * FROM sc_ua_mask_test LIMIT 5'
+      );
+      expect(res.rows.length).toBeGreaterThan(0);
+      for (const row of res.rows) {
+        expect(row.masked_price).toBe(1);
+      }
+    });
+
+    test('CUBE context in mask sql', async () => {
+      const res = await connection.query(
+        'SELECT * FROM sc_cube_mask_test LIMIT 5'
+      );
+      expect(res.rows.length).toBeGreaterThan(0);
+      for (const row of res.rows) {
+        expect(row.masked_product).toBeLessThan(0);
+      }
+    });
+
+    test('userAttributes shorthand in YAML mask sql', async () => {
+      const res = await connection.query(
+        'SELECT * FROM yaml_ua_mask_test LIMIT 5'
+      );
+      expect(res.rows.length).toBeGreaterThan(0);
+      for (const row of res.rows) {
+        expect(row.masked_status).toBeGreaterThan(0);
+      }
+    });
+
+    test('joined cube reference in mask sql', async () => {
+      const res = await connection.query(
+        'SELECT * FROM sc_joined_mask_test LIMIT 5'
+      );
+      expect(res.rows.length).toBeGreaterThan(0);
+      for (const row of res.rows) {
+        expect(row.masked_order_id).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('Shorthand and mask tests via REST API [Tesseract]', () => {
+    let scClient: CubeApi;
+
+    const SC_TEST_TOKEN = sign({
+      cubeCloud: {
+        userAttributes: {
+          tenantId: '1',
+        },
+        groups: ['1', '2'],
+      },
+      auth: {
+        username: 'sc_test',
+        userAttributes: {},
+        roles: [],
+        groups: [],
+      },
+    }, DEFAULT_CONFIG.CUBEJS_API_SECRET, {
+      expiresIn: '2 days'
+    });
+
+    beforeAll(async () => {
+      scClient = cubejs(async () => SC_TEST_TOKEN, {
+        apiUrl: birdbox.configuration.apiUrl,
+      });
+    });
+
+    test('userAttributes shorthand in mask sql via REST', async () => {
+      const result = await scClient.load({
+        measures: ['sc_ua_mask_test.count'],
+        dimensions: ['sc_ua_mask_test.masked_price'],
+      });
+      const rows = result.rawData();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row['sc_ua_mask_test.masked_price']).toBe(1);
+      }
+    });
+
+    test('CUBE context in mask sql via REST', async () => {
+      const result = await scClient.load({
+        measures: ['sc_cube_mask_test.count'],
+        dimensions: ['sc_cube_mask_test.masked_product'],
+      });
+      const rows = result.rawData();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row['sc_cube_mask_test.masked_product']).toBeLessThan(0);
+      }
+    });
+
+    test('userAttributes shorthand in YAML mask sql via REST', async () => {
+      const result = await scClient.load({
+        measures: ['yaml_ua_mask_test.count'],
+        dimensions: ['yaml_ua_mask_test.masked_status'],
+      });
+      const rows = result.rawData();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row['yaml_ua_mask_test.masked_status']).toBeGreaterThan(0);
+      }
+    });
+
+    test('joined cube reference in mask sql via REST', async () => {
+      const result = await scClient.load({
+        measures: ['sc_joined_mask_test.count'],
+        dimensions: ['sc_joined_mask_test.masked_order_id'],
+      });
+      const rows = result.rawData();
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row['sc_joined_mask_test.masked_order_id']).toBeGreaterThan(0);
+      }
     });
   });
 });

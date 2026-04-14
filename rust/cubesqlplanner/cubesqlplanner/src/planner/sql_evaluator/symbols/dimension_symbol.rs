@@ -226,19 +226,30 @@ impl DimensionSymbol {
     ) -> Result<Rc<MemberSymbol>, CubeError> {
         let mut result = self.clone();
         result.kind = self.kind.apply_to_deps(f)?;
+        if let Some(mask) = &self.mask_sql {
+            result.mask_sql = Some(mask.apply_recursive(f)?);
+        }
         Ok(MemberSymbol::new_dimension(Rc::new(result)))
     }
 
     pub fn iter_sql_calls(&self) -> Box<dyn Iterator<Item = &Rc<SqlCall>> + '_> {
-        self.kind.iter_sql_calls()
+        Box::new(self.kind.iter_sql_calls().chain(self.mask_sql.iter()))
     }
 
     pub fn get_dependencies(&self) -> Vec<Rc<MemberSymbol>> {
-        self.kind.get_dependencies()
+        let mut deps = self.kind.get_dependencies();
+        if let Some(mask) = &self.mask_sql {
+            mask.extract_symbol_deps(&mut deps);
+        }
+        deps
     }
 
     pub fn get_cube_refs(&self) -> Vec<CubeRef> {
-        self.kind.get_cube_refs()
+        let mut refs = self.kind.get_cube_refs();
+        if let Some(mask) = &self.mask_sql {
+            mask.extract_cube_refs(&mut refs);
+        }
+        refs
     }
 
     pub fn cube_name(&self) -> String {

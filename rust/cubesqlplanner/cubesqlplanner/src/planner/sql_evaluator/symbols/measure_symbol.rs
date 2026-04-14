@@ -305,6 +305,10 @@ impl MeasureSymbol {
             result.case = Some(case.apply_to_deps(f)?)
         }
 
+        if let Some(mask) = &self.mask_sql {
+            result.mask_sql = Some(mask.apply_recursive(f)?);
+        }
+
         Ok(MemberSymbol::new_measure(Rc::new(result)))
     }
 
@@ -314,7 +318,8 @@ impl MeasureSymbol {
         let result = self
             .kind
             .iter_sql_calls()
-            .chain(self.case.iter().flat_map(|case| case.iter_sql_calls()));
+            .chain(self.case.iter().flat_map(|case| case.iter_sql_calls()))
+            .chain(self.mask_sql.iter());
         Box::new(result)
     }
 
@@ -332,6 +337,9 @@ impl MeasureSymbol {
         if let Some(case) = &self.case {
             case.extract_symbol_deps(&mut deps);
         }
+        if let Some(mask) = &self.mask_sql {
+            mask.extract_symbol_deps(&mut deps);
+        }
         deps
     }
 
@@ -348,6 +356,9 @@ impl MeasureSymbol {
         }
         if let Some(case) = &self.case {
             case.extract_cube_refs(&mut refs);
+        }
+        if let Some(mask) = &self.mask_sql {
+            mask.extract_cube_refs(&mut refs);
         }
         refs
     }
