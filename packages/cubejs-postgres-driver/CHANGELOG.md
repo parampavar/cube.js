@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.34](https://github.com/cube-js/cube/compare/v1.6.33...v1.6.34) (2026-04-14)
+
+### Features
+
+- **postgres-driver:** improve DX with connection error messages ([#10679](https://github.com/cube-js/cube/issues/10679)) ([65fb8a8](https://github.com/cube-js/cube/commit/65fb8a847ef94f20b6b24bf8aa16f943932c1bcd))
+- Support pre-aggregation-specific data source configuration ([#10587](https://github.com/cube-js/cube/issues/10587)) ([04eed5d](https://github.com/cube-js/cube/commit/04eed5d5ba3c1ceb8cda3c13eebf7f354eb61f48))
+
 ## [1.6.33](https://github.com/cube-js/cube/compare/v1.6.32...v1.6.33) (2026-04-09)
 
 **Note:** Version bump only for package @cubejs-backend/postgres-driver

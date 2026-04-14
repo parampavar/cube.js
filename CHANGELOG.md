@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.34](https://github.com/cube-js/cube/compare/v1.6.33...v1.6.34) (2026-04-14)
+
+### Features
+
+- add format description handling ([#10688](https://github.com/cube-js/cube/issues/10688)) ([365bd74](https://github.com/cube-js/cube/commit/365bd74cdf420505ab073624462cd49127a4ca6a))
+- Generate unique names for pool with dataSource & preAggregation… ([#10680](https://github.com/cube-js/cube/issues/10680)) ([df1b7e7](https://github.com/cube-js/cube/commit/df1b7e70949b8db698a017ecc490c3788aa1d96f))
+- **postgres-driver:** improve DX with connection error messages ([#10679](https://github.com/cube-js/cube/issues/10679)) ([65fb8a8](https://github.com/cube-js/cube/commit/65fb8a847ef94f20b6b24bf8aa16f943932c1bcd))
+- **query-orchestrator:** Queue - support to use external_id (under flag) ([#10538](https://github.com/cube-js/cube/issues/10538)) ([810b776](https://github.com/cube-js/cube/commit/810b77609121fbec167dd6b97be95029bffb58f7))
+- Support pre-aggregation-specific data source configuration ([#10587](https://github.com/cube-js/cube/issues/10587)) ([04eed5d](https://github.com/cube-js/cube/commit/04eed5d5ba3c1ceb8cda3c13eebf7f354eb61f48))
+
 ## [1.6.33](https://github.com/cube-js/cube/compare/v1.6.32...v1.6.33) (2026-04-09)
 
 ### Bug Fixes

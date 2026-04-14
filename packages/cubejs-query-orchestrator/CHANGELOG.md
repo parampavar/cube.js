@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.34](https://github.com/cube-js/cube/compare/v1.6.33...v1.6.34) (2026-04-14)
+
+### Features
+
+- **query-orchestrator:** Queue - support to use external_id (under flag) ([#10538](https://github.com/cube-js/cube/issues/10538)) ([810b776](https://github.com/cube-js/cube/commit/810b77609121fbec167dd6b97be95029bffb58f7))
+- Support pre-aggregation-specific data source configuration ([#10587](https://github.com/cube-js/cube/issues/10587)) ([04eed5d](https://github.com/cube-js/cube/commit/04eed5d5ba3c1ceb8cda3c13eebf7f354eb61f48))
+
 ## [1.6.33](https://github.com/cube-js/cube/compare/v1.6.32...v1.6.33) (2026-04-09)
 
 **Note:** Version bump only for package @cubejs-backend/query-orchestrator
