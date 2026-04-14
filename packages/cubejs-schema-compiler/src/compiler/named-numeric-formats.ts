@@ -1,6 +1,6 @@
 // Predefined named numeric formats and their d3-format specifiers.
 //
-// "number", "percent", "currency", and "id" (without _X suffix) are already handled
+// "number", "percent", and "currency" (without _X suffix) are already handled
 // as separate format types in the existing API contract. Converting them to named
 // formats here would be a breaking change. Only the _X suffixed variants are named.
 export const NAMED_NUMERIC_FORMATS: Record<string, string> = {
@@ -53,6 +53,9 @@ export const NAMED_NUMERIC_FORMATS: Record<string, string> = {
   abbr_5: '.5s',
   abbr_6: '.6s',
 
+  // id: grouped integer (no decimals)
+  id: '.0f',
+
   // accounting (negative in parens): (,.Xf
   // Alias to accounting_2
   accounting: '(,.2f',
@@ -68,3 +71,23 @@ export const NAMED_NUMERIC_FORMATS: Record<string, string> = {
 export function resolveNamedNumericFormat(value: string): string | undefined {
   return NAMED_NUMERIC_FORMATS[value];
 }
+
+/**
+ * Maps standard/base format names to their default d3-format specifiers.
+ * Used by resolveFormatDescription to produce FormatDescription for
+ * formats that pass through as bare strings (percent, currency, number)
+ * as well as named formats resolved from NAMED_NUMERIC_FORMATS.
+ */
+export const STANDARD_FORMAT_SPECIFIERS: Record<string, { name: string; specifier: string }> = {
+  percent: { name: 'percent', specifier: '.2%' },
+  currency: { name: 'currency', specifier: '$,.2f' },
+  number: { name: 'number', specifier: ',.2f' },
+  abbr: { name: 'abbr', specifier: '.2s' },
+  accounting: { name: 'accounting', specifier: '(,.2f' },
+  id: { name: 'id', specifier: '.0f' },
+};
+
+export const DEFAULT_FORMAT_SPECIFIER: { name: string; specifier: string } = {
+  name: 'number',
+  specifier: ',.2f',
+};
