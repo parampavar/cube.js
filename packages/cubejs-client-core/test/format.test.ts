@@ -47,9 +47,15 @@ describe('formatValue', () => {
 
   it('passthrough formats', () => {
     expect(formatValue('https://img.example.com/photo.png', { type: 'string', format: 'imageUrl' })).toBe('https://img.example.com/photo.png');
-    expect(formatValue(12345, { type: 'number', format: 'id' })).toBe('12345');
     expect(formatValue('https://example.com', { type: 'string', format: 'link' })).toBe('https://example.com');
     expect(formatValue('https://example.com', { type: 'string', format: { type: 'link', label: 'Example' } })).toBe('https://example.com');
+  });
+
+  it('format: id (integer, no thousands separator)', () => {
+    expect(formatValue(12345, { type: 'number', format: 'id' })).toBe('12345');
+    expect(formatValue('12345', { type: 'number', format: 'id' })).toBe('12345');
+    expect(formatValue(12345.78, { type: 'number', format: 'id' })).toBe('12346');
+    expect(formatValue(0, { type: 'number', format: 'id' })).toBe('0');
   });
 
   it('type-based fallback: number', () => {
@@ -98,5 +104,15 @@ describe('formatValue', () => {
     expect(formatValue(42, { type: 'number' })).toBe('42.00');
     expect(formatValue(true, { type: 'boolean' })).toBe('true');
     expect(formatValue('', { type: 'string' })).toBe('');
+  });
+
+  it('boolean: coerces numeric 0/1 from SQL drivers', () => {
+    expect(formatValue(false, { type: 'boolean' })).toBe('false');
+    expect(formatValue(1, { type: 'boolean' })).toBe('true');
+    expect(formatValue(0, { type: 'boolean' })).toBe('false');
+    expect(formatValue('true', { type: 'boolean' })).toBe('true');
+    expect(formatValue('false', { type: 'boolean' })).toBe('false');
+    expect(formatValue('1', { type: 'boolean' })).toBe('true');
+    expect(formatValue('0', { type: 'boolean' })).toBe('false');
   });
 });

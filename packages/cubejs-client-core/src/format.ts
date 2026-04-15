@@ -10,6 +10,8 @@ const DEFAULT_NUMBER_FORMAT = ',.2f';
 const DEFAULT_CURRENCY_FORMAT = '$,.2f';
 const DEFAULT_PERCENT_FORMAT = '.2%';
 
+const DEFAULT_ID_FORMAT = '.0f';
+
 function detectLocale() {
   try {
     return new Intl.NumberFormat().resolvedOptions().locale;
@@ -79,6 +81,28 @@ export function formatValue(
     return emptyPlaceholder;
   }
 
+  if (type === 'boolean') {
+    if (typeof value === 'boolean') {
+      return value.toString();
+    }
+
+    if (typeof value === 'number') {
+      return Boolean(value).toString();
+    }
+
+    // Some SQL drivers return booleans as '0'/'1' or 'true'/'false' strings, It's incorrect behaivour in Cube,
+    // but let's format it as boolean for backward compatibility.
+    if (value === '0' || value === 'false') {
+      return 'false';
+    }
+
+    if (value === '1' || value === 'true') {
+      return 'true';
+    }
+
+    return String(value);
+  }
+
   if (format && typeof format === 'object') {
     if (format.type === 'custom-numeric') {
       return d3Format(format.value)(parseNumber(value));
@@ -101,8 +125,9 @@ export function formatValue(
         return getD3NumericLocale(locale).format(DEFAULT_PERCENT_FORMAT)(parseNumber(value));
       case 'number':
         return getD3NumericLocale(locale).format(DEFAULT_NUMBER_FORMAT)(parseNumber(value));
-      case 'imageUrl':
       case 'id':
+        return d3Format(DEFAULT_ID_FORMAT)(parseNumber(value));
+      case 'imageUrl':
       case 'link':
       default:
         return String(value);
