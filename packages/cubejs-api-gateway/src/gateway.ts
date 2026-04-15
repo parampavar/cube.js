@@ -56,6 +56,7 @@ import {
   SqlApiRequest,
   MetaResponseResultFn,
   RequestQuery,
+  QueryConvertRequest,
 } from './types/request';
 import {
   CheckAuthInternalOptions,
@@ -413,6 +414,14 @@ class ApiGateway {
     app.post(`${this.basePath}/v1/dry-run`, jsonParser, userMiddlewares, userAsyncHandler(async (req, res) => {
       await this.dryRun({
         query: req.body.query,
+        context: req.context,
+        res: this.resToResultFn(res)
+      });
+    }));
+
+    app.post(`${this.basePath}/v1/convert-query`, jsonParser, userMiddlewares, userAsyncHandler(async (req, res) => {
+      await this.convertQuery({
+        payload: req.body,
         context: req.context,
         res: this.resToResultFn(res)
       });
@@ -1599,6 +1608,35 @@ class ApiGateway {
       },
       requestId: context.requestId
     };
+  }
+
+  protected async convertQuery({ payload, context, res }: QueryConvertRequest) {
+    try {
+      await this.assertApiScope('sql', context.securityContext);
+
+      if (payload.input !== 'sql') {
+        throw new Error(`Unexpected input parameter value '${payload.input}'`);
+      }
+
+      if (payload.output !== 'rest') {
+        throw new Error(`Unexpected output parameter value '${payload.output}'`);
+      }
+
+      if (typeof payload.query !== 'string' || !payload.query.trim()) {
+        throw new Error('query parameter must be a non-empty string');
+      }
+
+      const result = await this.sqlServer.rest4sql(payload.query, context.securityContext);
+
+      await res(result);
+    } catch (e: any) {
+      this.handleError({
+        e,
+        context,
+        query: payload,
+        res,
+      });
+    }
   }
 
   protected async dryRun({ query, context, res }: QueryRequest) {
