@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.35](https://github.com/cube-js/cube/compare/v1.6.34...v1.6.35) (2026-04-15)
+
+### Features
+
+- **cubestore:** Sync tables cache instead of reset ([#10686](https://github.com/cube-js/cube/issues/10686)) ([d0617a0](https://github.com/cube-js/cube/commit/d0617a0158ebb504cef563f6185b096082fa9fd2))
+
 ## [1.6.34](https://github.com/cube-js/cube/compare/v1.6.33...v1.6.34) (2026-04-14)
 
 **Note:** Version bump only for package @cubejs-backend/cubestore

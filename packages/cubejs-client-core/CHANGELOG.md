@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.35](https://github.com/cube-js/cube/compare/v1.6.34...v1.6.35) (2026-04-15)
+
+### Features
+
+- **client-core:** Improve format API ([#10692](https://github.com/cube-js/cube/issues/10692)) ([9fee612](https://github.com/cube-js/cube/commit/9fee612f8d0e3d045a18edfa97283749beff760f))
+
 ## [1.6.34](https://github.com/cube-js/cube/compare/v1.6.33...v1.6.34) (2026-04-14)
 
 ### Features

@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.35](https://github.com/cube-js/cube/compare/v1.6.34...v1.6.35) (2026-04-15)
+
+### Features
+
+- **api-gateway:** Introduce Query format Convertion API ([#10286](https://github.com/cube-js/cube/issues/10286)) ([9ba2897](https://github.com/cube-js/cube/commit/9ba289732c5d6c2545ce3ce086003d1caea3dd58))
+
 ## [1.6.34](https://github.com/cube-js/cube/compare/v1.6.33...v1.6.34) (2026-04-14)
 
 **Note:** Version bump only for package @cubejs-backend/testing

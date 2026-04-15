@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.35](https://github.com/cube-js/cube/compare/v1.6.34...v1.6.35) (2026-04-15)
+
+### Bug Fixes
+
+- **tesseract:** Issue with multistage rolling window without time dimension ([#10691](https://github.com/cube-js/cube/issues/10691)) ([78f80c9](https://github.com/cube-js/cube/commit/78f80c9c12b4fed628dd3b3b9678d86472d14109))
+
+### Features
+
+- **api-gateway:** Introduce Query format Convertion API ([#10286](https://github.com/cube-js/cube/issues/10286)) ([9ba2897](https://github.com/cube-js/cube/commit/9ba289732c5d6c2545ce3ce086003d1caea3dd58))
+- **client-core:** Improve format API ([#10692](https://github.com/cube-js/cube/issues/10692)) ([9fee612](https://github.com/cube-js/cube/commit/9fee612f8d0e3d045a18edfa97283749beff760f))
+- **cubestore:** Sync tables cache instead of reset ([#10686](https://github.com/cube-js/cube/issues/10686)) ([d0617a0](https://github.com/cube-js/cube/commit/d0617a0158ebb504cef563f6185b096082fa9fd2))
+
 ## [1.6.34](https://github.com/cube-js/cube/compare/v1.6.33...v1.6.34) (2026-04-14)
 
 ### Features
