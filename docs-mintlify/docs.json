@@ -53,11 +53,46 @@
                 "pages": [
                   "docs/explore-analyze/workbooks/querying-data",
                   "docs/explore-analyze/workbooks/calculated-fields",
-                  "docs/explore-analyze/workbooks/source-sql-tabs",
-                  "docs/explore-analyze/workbooks/charts"
+                  "docs/explore-analyze/workbooks/source-sql-tabs"
                 ]
               },
               "docs/explore-analyze/explore",
+              {
+                "group": "Charts",
+                "root": "docs/explore-analyze/charts/index",
+                "pages": [
+                  {
+                    "group": "Chart types",
+                    "root": "docs/explore-analyze/charts/chart-types/index",
+                    "pages": [
+                      "docs/explore-analyze/charts/chart-types/bar",
+                      "docs/explore-analyze/charts/chart-types/line",
+                      "docs/explore-analyze/charts/chart-types/area",
+                      "docs/explore-analyze/charts/chart-types/scatter",
+                      "docs/explore-analyze/charts/chart-types/pie",
+                      "docs/explore-analyze/charts/chart-types/heatmap",
+                      "docs/explore-analyze/charts/chart-types/boxplot",
+                      "docs/explore-analyze/charts/chart-types/table",
+                      "docs/explore-analyze/charts/chart-types/kpi",
+                      "docs/explore-analyze/charts/chart-types/map",
+                      "docs/explore-analyze/charts/chart-types/html"
+                    ]
+                  },
+                  "docs/explore-analyze/charts/custom",
+              {
+                    "group": "Configure charts",
+                    "root": "docs/explore-analyze/charts/configuration/index",
+                    "pages": [
+                      "docs/explore-analyze/charts/configuration/series-mapping",
+                      "docs/explore-analyze/charts/configuration/series-configuration",
+                      "docs/explore-analyze/charts/configuration/color-and-stacking",
+                      "docs/explore-analyze/charts/configuration/axes",
+                      "docs/explore-analyze/charts/configuration/tooltips",
+                      "docs/explore-analyze/charts/configuration/data-labels"
+                    ]
+                  }
+                ]
+              },
               "docs/explore-analyze/analytics-chat"
             ]
           },
