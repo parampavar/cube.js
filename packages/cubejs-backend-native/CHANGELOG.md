@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.37](https://github.com/cube-js/cube/compare/v1.6.36...v1.6.37) (2026-04-20)
+
+### Features
+
+- **cubeshared:** Upgrade flatbuffers to 25.12.19 ([#10709](https://github.com/cube-js/cube/issues/10709)) ([107f339](https://github.com/cube-js/cube/commit/107f33931c6d18800c7d579ef5d33e8932f34ac3))
+
 ## [1.6.36](https://github.com/cube-js/cube/compare/v1.6.35...v1.6.36) (2026-04-16)
 
 **Note:** Version bump only for package @cubejs-backend/native
