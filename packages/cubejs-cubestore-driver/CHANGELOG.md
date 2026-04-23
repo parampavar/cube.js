@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.38](https://github.com/cube-js/cube/compare/v1.6.37...v1.6.38) (2026-04-23)
+
+### Features
+
+- **cubestore-driver:** Upgrade flatbuffers to 25.9.23 ([#10717](https://github.com/cube-js/cube/issues/10717)) ([311a6a8](https://github.com/cube-js/cube/commit/311a6a8ca3d03ba88596f0664d3aabd7ce4182fc))
+- **cubestore:** Support passing parameters in protocol (cache/queue) ([#6225](https://github.com/cube-js/cube/issues/6225)) ([06f64cf](https://github.com/cube-js/cube/commit/06f64cf32e7d36bf6233c71e9cf8bc95d4e48aee))
+
 ## [1.6.37](https://github.com/cube-js/cube/compare/v1.6.36...v1.6.37) (2026-04-20)
 
 **Note:** Version bump only for package @cubejs-backend/cubestore-driver
