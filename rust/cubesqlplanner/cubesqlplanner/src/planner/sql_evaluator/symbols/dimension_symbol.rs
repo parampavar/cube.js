@@ -233,7 +233,13 @@ impl DimensionSymbol {
     }
 
     pub fn iter_sql_calls(&self) -> Box<dyn Iterator<Item = &Rc<SqlCall>> + '_> {
-        Box::new(self.kind.iter_sql_calls().chain(self.mask_sql.iter()))
+        // mask_sql is intentionally excluded here: it's compiled in the
+        // context of the cube that owns the dimension (via aliasMember when
+        // the dimension is exposed through a view), which may legitimately
+        // differ from the current cube_name of the symbol. Including it in
+        // the generic validate_regular_member_cube_refs would produce false
+        // foreign-cube errors for view members.
+        self.kind.iter_sql_calls()
     }
 
     pub fn get_dependencies(&self) -> Vec<Rc<MemberSymbol>> {
@@ -351,13 +357,26 @@ impl SymbolFactory for DimensionSymbolFactory {
             None
         };
 
+        let is_sql_direct_ref = sql.as_ref().is_some_and(|s| s.is_direct_reference());
+
+        // mask.sql references are written in the context of the cube that
+        // owns the dimension. When a dimension is exposed through a view,
+        // the dimension's sql is a direct reference to the underlying cube
+        // member; compile mask.sql against that referenced member's cube so
+        // CUBE / cross-cube references inside the mask resolve the same way
+        // as on the owning cube — and as they do on the legacy BaseQuery
+        // path, which routes mask compilation through aliasMember for the
+        // same reason.
+        let mask_sql_cube_name = sql
+            .as_ref()
+            .and_then(|s| s.resolve_direct_reference())
+            .map(|dep| dep.cube_name())
+            .unwrap_or_else(|| path.cube_name().clone());
         let mask_sql = if let Some(mask_sql) = mask_sql {
-            Some(compiler.compile_sql_call(path.cube_name(), mask_sql)?)
+            Some(compiler.compile_sql_call(&mask_sql_cube_name, mask_sql)?)
         } else {
             None
         };
-
-        let is_sql_direct_ref = sql.as_ref().is_some_and(|s| s.is_direct_reference());
 
         let case = if let Some(native_case) = definition.case()? {
             Some(Case::try_new(path.cube_name(), native_case, compiler)?)

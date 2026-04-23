@@ -315,11 +315,16 @@ impl MeasureSymbol {
     pub fn iter_sql_calls(&self) -> Box<dyn Iterator<Item = &Rc<SqlCall>> + '_> {
         //FIXME We don't include filters and order_by here for backward compatibility
         // because BaseQuery doesn't validate these SQL calls
+        // mask_sql is intentionally excluded here: it's compiled in the
+        // context of the cube that owns the measure (via aliasMember when
+        // the measure is exposed through a view), which may legitimately
+        // differ from the current cube_name of the symbol. Including it in
+        // the generic validate_regular_member_cube_refs would produce false
+        // foreign-cube errors for view members.
         let result = self
             .kind
             .iter_sql_calls()
-            .chain(self.case.iter().flat_map(|case| case.iter_sql_calls()))
-            .chain(self.mask_sql.iter());
+            .chain(self.case.iter().flat_map(|case| case.iter_sql_calls()));
         Box::new(result)
     }
 
@@ -512,12 +517,6 @@ impl SymbolFactory for MeasureSymbolFactory {
             cube_evaluator,
         } = self;
 
-        let mask_sql = if let Some(mask_sql) = mask_sql {
-            Some(compiler.compile_sql_call(path.cube_name(), mask_sql)?)
-        } else {
-            None
-        };
-
         let pk_sqls = if sql.is_none() {
             cube_evaluator
                 .static_data()
@@ -575,6 +574,25 @@ impl SymbolFactory for MeasureSymbolFactory {
         };
 
         let is_sql_is_direct_ref = sql.as_ref().is_some_and(|s| s.is_direct_reference());
+
+        // mask.sql references are written in the context of the cube that
+        // owns the measure. When a measure is exposed through a view, the
+        // measure's sql is a direct reference to the underlying cube member;
+        // compile mask.sql against that referenced member's cube so CUBE /
+        // cross-cube references inside the mask resolve the same way as on
+        // the owning cube — and as they do on the legacy BaseQuery path,
+        // which routes mask compilation through aliasMember for the same
+        // reason.
+        let mask_sql_cube_name = sql
+            .as_ref()
+            .and_then(|s| s.resolve_direct_reference())
+            .map(|dep| dep.cube_name())
+            .unwrap_or_else(|| path.cube_name().clone());
+        let mask_sql = if let Some(mask_sql) = mask_sql {
+            Some(compiler.compile_sql_call(&mask_sql_cube_name, mask_sql)?)
+        } else {
+            None
+        };
 
         let time_shifts = if let Some(time_shift_references) =
             &definition.static_data().time_shift_references
