@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.39](https://github.com/cube-js/cube/compare/v1.6.38...v1.6.39) (2026-04-24)
+
+### Bug Fixes
+
+- **bigquery-driver:** Return int64/float64 as strings in query/stream ([#10738](https://github.com/cube-js/cube/issues/10738)) ([15626b1](https://github.com/cube-js/cube/commit/15626b1281dc5e09a28e1612c69f63ab68b9d7cc))
+
 ## [1.6.38](https://github.com/cube-js/cube/compare/v1.6.37...v1.6.38) (2026-04-23)
 
 **Note:** Version bump only for package @cubejs-backend/bigquery-driver

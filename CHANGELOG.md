@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.39](https://github.com/cube-js/cube/compare/v1.6.38...v1.6.39) (2026-04-24)
+
+### Bug Fixes
+
+- **bigquery-driver:** Return int64/float64 as strings in query/stream ([#10738](https://github.com/cube-js/cube/issues/10738)) ([15626b1](https://github.com/cube-js/cube/commit/15626b1281dc5e09a28e1612c69f63ab68b9d7cc))
+- **tesseract:** mask.sql with cross-cube refs through prefixed views ([#10727](https://github.com/cube-js/cube/issues/10727)) ([e52f201](https://github.com/cube-js/cube/commit/e52f201e20bdd1ab3a7556049099d286397e29b9))
+
+### Performance Improvements
+
+- **cubejs-backend-native:** Transfer ResultWrapper rawData as Buffer(JSON), ~10x faster ([#10728](https://github.com/cube-js/cube/issues/10728)) ([291205f](https://github.com/cube-js/cube/commit/291205f62b982be135ea153faaee9886e3fc4534))
+- **postgres-driver:** Fast date, timestamp/tz parsers ([#10737](https://github.com/cube-js/cube/issues/10737)) ([c3a5709](https://github.com/cube-js/cube/commit/c3a570989fa26cd14b00205e6fc62645c7dc0a6d))
+
 ## [1.6.38](https://github.com/cube-js/cube/compare/v1.6.37...v1.6.38) (2026-04-23)
 
 ### Features

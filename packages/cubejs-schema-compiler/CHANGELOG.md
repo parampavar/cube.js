@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.39](https://github.com/cube-js/cube/compare/v1.6.38...v1.6.39) (2026-04-24)
+
+### Bug Fixes
+
+- **tesseract:** mask.sql with cross-cube refs through prefixed views ([#10727](https://github.com/cube-js/cube/issues/10727)) ([e52f201](https://github.com/cube-js/cube/commit/e52f201e20bdd1ab3a7556049099d286397e29b9))
+
 ## [1.6.38](https://github.com/cube-js/cube/compare/v1.6.37...v1.6.38) (2026-04-23)
 
 **Note:** Version bump only for package @cubejs-backend/schema-compiler

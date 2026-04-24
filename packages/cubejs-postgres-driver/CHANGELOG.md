@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.39](https://github.com/cube-js/cube/compare/v1.6.38...v1.6.39) (2026-04-24)
+
+### Performance Improvements
+
+- **postgres-driver:** Fast date, timestamp/tz parsers ([#10737](https://github.com/cube-js/cube/issues/10737)) ([c3a5709](https://github.com/cube-js/cube/commit/c3a570989fa26cd14b00205e6fc62645c7dc0a6d))
+
 ## [1.6.38](https://github.com/cube-js/cube/compare/v1.6.37...v1.6.38) (2026-04-23)
 
 **Note:** Version bump only for package @cubejs-backend/postgres-driver
