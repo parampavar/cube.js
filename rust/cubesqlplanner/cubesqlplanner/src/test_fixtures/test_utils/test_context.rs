@@ -1,8 +1,8 @@
 use crate::cube_bridge::base_query_options::BaseQueryOptions;
 use crate::cube_bridge::join_hints::JoinHintItem;
-use crate::logical_plan::PreAggregation;
+use crate::logical_plan::PreAggregationUsage;
 #[cfg(feature = "integration-postgres")]
-use crate::logical_plan::{PreAggregationSource, PreAggregationTable};
+use crate::logical_plan::{PreAggregation, PreAggregationSource, PreAggregationTable};
 use crate::plan::Filter;
 use crate::planner::filter::base_segment::BaseSegment;
 use crate::planner::query_tools::QueryTools;
@@ -382,7 +382,7 @@ impl TestContext {
     pub fn build_sql_with_used_pre_aggregations(
         &self,
         query: &str,
-    ) -> Result<(String, Vec<Rc<PreAggregation>>), cubenativeutils::CubeError> {
+    ) -> Result<(String, Vec<PreAggregationUsage>), cubenativeutils::CubeError> {
         let options = self.create_query_options_from_yaml(query);
         let ctx = self.for_options(options.as_ref())?;
         let request = QueryProperties::try_new(ctx.query_tools.clone(), options)?;
@@ -430,6 +430,11 @@ impl TestContext {
             .build_sql_and_params(&raw_sql, true, &templates)
             .expect("Failed to build SQL and params");
 
+        // Strip __usage_N suffixes from SQL, same as base_query.rs does for single usage
+        let sql = pre_aggregations
+            .iter()
+            .fold(sql, |s, u| s.replace(&format!("__usage_{}", u.index), ""));
+
         let final_sql = Self::inline_params(&sql, &params);
 
         let messages = client.simple_query(&final_sql).await.unwrap_or_else(|e| {
@@ -448,9 +453,10 @@ impl TestContext {
     async fn create_pre_agg_tables(
         &self,
         client: &tokio_postgres::Client,
-        pre_aggregations: &[Rc<PreAggregation>],
+        pre_aggregations: &[PreAggregationUsage],
     ) {
-        for pre_agg in pre_aggregations {
+        for usage in pre_aggregations {
+            let pre_agg = &usage.pre_aggregation;
             let tables = Self::collect_pre_agg_source_tables(pre_agg.source());
             let yaml = Self::build_pre_agg_query_yaml(pre_agg);
 

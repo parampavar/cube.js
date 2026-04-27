@@ -3,13 +3,32 @@ use super::top_level_planner::TopLevelPlanner;
 use super::QueryProperties;
 use crate::cube_bridge::base_query_options::BaseQueryOptions;
 use crate::cube_bridge::pre_aggregation_obj::NativePreAggregationObj;
+use crate::logical_plan::PreAggregationUsage;
 use cubenativeutils::wrappers::inner_types::InnerTypes;
 use cubenativeutils::wrappers::object::NativeArray;
 use cubenativeutils::wrappers::serializer::NativeSerialize;
 use cubenativeutils::wrappers::NativeType;
 use cubenativeutils::wrappers::{NativeContextHolder, NativeObjectHandle};
 use cubenativeutils::CubeError;
+use serde::Serialize;
+use std::collections::HashMap;
 use std::rc::Rc;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UsageDateRange {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    date_range: Option<Vec<String>>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GroupedPreAggregationInfo {
+    cube_name: String,
+    pre_aggregation_name: String,
+    external: bool,
+    usages: HashMap<String, UsageDateRange>,
+}
 
 pub struct BaseQuery<IT: InnerTypes> {
     context: NativeContextHolder<IT>,
@@ -59,12 +78,10 @@ impl<IT: InnerTypes> BaseQuery<IT> {
             self.cubestore_support_multistage,
         );
 
-        let (sql, used_pre_aggregations) = planner.plan()?;
+        let (sql, usages) = planner.plan()?;
 
-        let is_external = if !used_pre_aggregations.is_empty() {
-            used_pre_aggregations
-                .iter()
-                .all(|pre_aggregation| pre_aggregation.external())
+        let is_external = if !usages.is_empty() {
+            usages.iter().all(|usage| usage.pre_aggregation.external())
         } else {
             false
         };
@@ -74,13 +91,26 @@ impl<IT: InnerTypes> BaseQuery<IT> {
             .query_tools
             .build_sql_and_params(&sql, true, &templates)?;
 
+        // For single usage, strip __usage_N suffix from SQL to maintain backward compat
+        let final_sql = if usages.len() == 1 {
+            result_sql.replace(&format!("__usage_{}", usages[0].index), "")
+        } else {
+            result_sql
+        };
+
         let res = self.context.empty_array()?;
-        res.set(0, result_sql.to_native(self.context.clone())?)?;
+        res.set(0, final_sql.to_native(self.context.clone())?)?;
         res.set(1, params.to_native(self.context.clone())?)?;
-        if let Some(used_pre_aggregation) = used_pre_aggregations.first() {
+
+        if usages.len() > 1 {
+            // Multiple usages: group by (cubeName, name), return array of grouped infos
+            let grouped = Self::group_usages(&usages);
+            res.set(2, grouped.to_native(self.context.clone())?)?;
+        } else if let Some(usage) = usages.first() {
+            // Single usage: return old-style pre-aggregation object for backward compat
             let pre_aggregation_obj = self.query_tools.base_tools().get_pre_aggregation_by_name(
-                used_pre_aggregation.cube_name().clone(),
-                used_pre_aggregation.name().clone(),
+                usage.pre_aggregation.cube_name().clone(),
+                usage.pre_aggregation.name().clone(),
             )?;
             res.set(
                 2,
@@ -91,8 +121,48 @@ impl<IT: InnerTypes> BaseQuery<IT> {
                     .to_native(self.context.clone())?,
             )?;
         }
-        let result = NativeObjectHandle::new(res.into_object());
 
+        let result = NativeObjectHandle::new(res.into_object());
         Ok(result)
+    }
+
+    fn group_usages(usages: &[PreAggregationUsage]) -> Vec<GroupedPreAggregationInfo> {
+        let mut groups: HashMap<(String, String), GroupedPreAggregationInfo> = HashMap::new();
+
+        for usage in usages {
+            let pre_agg = &usage.pre_aggregation;
+            let cube_name = pre_agg.cube_name().clone();
+            let name = pre_agg.name().clone();
+            let key = (cube_name.clone(), name.clone());
+
+            let suffix = format!("__usage_{}", usage.index);
+
+            let group = groups
+                .entry(key)
+                .or_insert_with(|| GroupedPreAggregationInfo {
+                    cube_name,
+                    pre_aggregation_name: name,
+                    external: pre_agg.external(),
+                    usages: HashMap::new(),
+                });
+
+            group.usages.insert(
+                suffix,
+                UsageDateRange {
+                    date_range: usage
+                        .date_range
+                        .as_ref()
+                        .map(|(from, to)| vec![from.clone(), to.clone()]),
+                },
+            );
+        }
+
+        let mut result: Vec<_> = groups.into_values().collect();
+        result.sort_by(|a, b| {
+            a.cube_name
+                .cmp(&b.cube_name)
+                .then(a.pre_aggregation_name.cmp(&b.pre_aggregation_name))
+        });
+        result
     }
 }
