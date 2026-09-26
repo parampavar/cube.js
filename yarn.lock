@@ -7221,9 +7221,9 @@
     "@types/node" "*"
 
 "@types/csv-write-stream@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@types/csv-write-stream/-/csv-write-stream-2.0.0.tgz#44dcabe9d85c0196c7fd6ffb8033658451ff9dcc"
-  integrity sha512-lAqCgs4614VpX/+U7BuR/SiEHdpet5ufc8cdjuQjhA7VVREJAT4LHKNUvAss9jf6eHH400yHhOEWbFP0RZPYrA==
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@types/csv-write-stream/-/csv-write-stream-2.0.3.tgz#446ae0eaf1f10c1275733c7f7a597d3d76f61c79"
+  integrity sha512-ygIOJr/44y1bn5uyzP97KPT2vbN2g/7frqgG06f0u6c77bpt/j1SuA9ElSI3i+/r7Y3+zTyatTpp/uR6u0VJqA==
   dependencies:
     "@types/node" "*"
 
