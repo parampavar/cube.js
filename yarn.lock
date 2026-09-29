@@ -7113,13 +7113,6 @@
   dependencies:
     tslib "^2.4.0"
 
-"@types/acorn@*":
-  version "4.0.6"
-  resolved "https://registry.yarnpkg.com/@types/acorn/-/acorn-4.0.6.tgz#d61ca5480300ac41a7d973dd5b84d0a591154a22"
-  integrity sha512-veQTnWP+1D/xbxVrPC3zHnCZRjSrKfhbMUlEA43iMZLu7EsnTtkJklIuwrCPbOi8YkvDQAiW05VQQFvvz9oieQ==
-  dependencies:
-    "@types/estree" "*"
-
 "@types/babel__code-frame@^7.0.6":
   version "7.0.6"
   resolved "https://registry.yarnpkg.com/@types/babel__code-frame/-/babel__code-frame-7.0.6.tgz#20a899c0d29fba1ddf5c2156a10a2bda75ee6f29"
@@ -7775,11 +7768,11 @@
     "@types/superagent" "*"
 
 "@types/syntax-error@^1.4.1":
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/@types/syntax-error/-/syntax-error-1.4.1.tgz#4a22e057ec09b0dfc174cf4362351277f8fd9016"
-  integrity sha512-0C0vngn6QpREyqF1fdrofc6ZqrvgWRQmiXvV4nSCToQj3Di7/ecSuDX7lq36j9I3ecpnnFLSBayMf7ZqRYkZKQ==
+  version "1.4.5"
+  resolved "https://registry.yarnpkg.com/@types/syntax-error/-/syntax-error-1.4.5.tgz#62e3fc0eccb9c2f0db6a5bf7a518200edaed323a"
+  integrity sha512-rJ1HoZI2k0NT5R0ln4AamQ1+4a31R2Sw4cS8YIXBhkUNXI+WCam8/AR/hHZwNHMVfvyxh3/dYCX/xMDyV6yQgQ==
   dependencies:
-    "@types/acorn" "*"
+    acorn "^7.0.0"
 
 "@types/throttle-debounce@^2.1.0":
   version "2.1.0"
